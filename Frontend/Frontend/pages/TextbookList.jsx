@@ -1,28 +1,40 @@
 import { useEffect, useState } from 'react';
 import axios from '../src/api/axios';
 import { toast } from 'react-toastify';
-import { Download, MessageSquare, Eye, User, BookOpen, DollarSign, Calendar, X, Send } from 'lucide-react';
+import { Download, MessageSquare, Eye, User, BookOpen, DollarSign, Calendar, X, Send, Mail } from 'lucide-react';
 
 const TextbookList = () => {
+  const token = localStorage.getItem('token');
+  const [userEmail, setUserEmail] = useState('');
+
   const [textbooks, setTextbooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
-  
-  // Chat states
-  const [showChat, setShowChat] = useState(false);
-  const [selectedConversation, setSelectedConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [chatLoading, setChatLoading] = useState(false);
-  const [conversations, setConversations] = useState([]);
+
+  // Email modal states
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [emailContent, setEmailContent] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
 
   useEffect(() => {
+    // Fetch user data including email
+    const fetchUserData = async () => {
+      try {
+        const userRes = await axios.get('/api/user/me', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        setUserEmail(userRes.data.email);
+      } catch (err) {
+        console.error("Failed to fetch user data:", err);
+      }
+    };
+
     const fetchTextbooks = async () => {
       try {
         setLoading(true);
         const res = await axios.get('/api/textbook');
-        
         if (Array.isArray(res.data)) {
           setTextbooks(res.data);
         } else if (res.data.textbooks && Array.isArray(res.data.textbooks)) {
@@ -40,84 +52,63 @@ const TextbookList = () => {
       }
     };
 
+    if (token) {
+      fetchUserData();
+    }
     fetchTextbooks();
-  }, []);
+  }, [token]);
 
-  // Fetch conversations when chat is opened
-  useEffect(() => {
-    if (showChat) {
-      fetchConversations();
-    }
-  }, [showChat]);
-
-  // Fetch messages when a conversation is selected
-  useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages();
-    }
-  }, [selectedConversation]);
-
-  const fetchConversations = async () => {
-    try {
-      // This would be your API endpoint to get user's conversations
-      const res = await axios.get('/api/conversations');
-      setConversations(res.data);
-    } catch (err) {
-      console.error("Fetch conversations error:", err);
-      toast.error("Failed to load conversations");
-    }
+  const openEmailModal = (book) => {
+    setSelectedBook(book);
+    setEmailContent(`Hello, I'm interested in your textbook "${book.title}" listed on the marketplace.`);
+    setShowEmailModal(true);
   };
 
-  const fetchMessages = async () => {
-    try {
-      setChatLoading(true);
-      const { textbookId, userId } = selectedConversation;
-      const res = await axios.get(`/api/messages?userId=${userId}&textbookId=${textbookId}`);
-      setMessages(res.data);
-    } catch (err) {
-      console.error("Fetch messages error:", err);
-      toast.error("Failed to load messages");
-    } finally {
-      setChatLoading(false);
+  const sendEmail = async () => {
+    if (!selectedBook || !emailContent.trim()) {
+      toast.error('Please write a message');
+      return;
     }
-  };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim()) return;
-    
     try {
-      const { textbookId, userId } = selectedConversation;
-      const res = await axios.post('/api/messages', {
-        recipient: userId,
-        textbook: textbookId,
-        text: newMessage
+      setEmailLoading(true);
+      
+      // Get the uploader's email
+      const uploaderId = selectedBook.uploader?._id || selectedBook.uploader;
+      const uploaderRes = await axios.get(`/api/user/${uploaderId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       
-      setMessages([...messages, res.data]);
-      setNewMessage('');
+      const uploaderEmail = uploaderRes.data.email;
+      
+      // Send email via your backend
+      await axios.post('/api/send-email', {
+        to: uploaderEmail,
+        from: userEmail,
+        subject: `Inquiry about: ${selectedBook.title}`,
+        text: emailContent,
+        textbookId: selectedBook._id,
+        textbookTitle: selectedBook.title
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      toast.success('Email sent successfully!');
+      setShowEmailModal(false);
+      setEmailContent('');
     } catch (err) {
-      console.error("Send message error:", err);
-      toast.error("Failed to send message");
+      console.error('Send email error:', err);
+      toast.error(err.response?.data?.message || 'Failed to send email');
+    } finally {
+      setEmailLoading(false);
     }
   };
 
-  const startConversation = (book) => {
-    setSelectedConversation({
-      textbookId: book._id,
-      userId: book.uploader,
-      textbookTitle: book.title,
-      userName: book.uploaderUsername || 'Seller'
-    });
-    setShowChat(true);
-  };
-
-  // Filter textbooks by category
   const filteredTextbooks = textbooks.filter(book => {
     if (selectedCategory === 'all') return true;
     return book.category === selectedCategory;
   });
 
-  // Sort textbooks
   const sortedTextbooks = [...filteredTextbooks].sort((a, b) => {
     if (sortBy === 'newest') {
       return new Date(b.createdAt) - new Date(a.createdAt);
@@ -129,7 +120,6 @@ const TextbookList = () => {
     return 0;
   });
 
-  // Format price
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -137,7 +127,6 @@ const TextbookList = () => {
     }).format(price);
   };
 
-  // Format date
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -164,16 +153,16 @@ const TextbookList = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Header and Filters */}
+      {/* Filters */}
       <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Textbook Marketplace</h1>
-        
         <div className="flex flex-wrap gap-4">
+          {/* Category filter */}
           <div className="flex items-center gap-2">
             <label htmlFor="category" className="text-sm font-medium text-gray-700">Category:</label>
-            <select 
+            <select
               id="category"
-              value={selectedCategory} 
+              value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="border border-gray-300 rounded-md px-3 py-1 text-sm"
             >
@@ -186,12 +175,13 @@ const TextbookList = () => {
               <option value="programming">Programming</option>
             </select>
           </div>
-          
+
+          {/* Sort filter */}
           <div className="flex items-center gap-2">
             <label htmlFor="sort" className="text-sm font-medium text-gray-700">Sort by:</label>
-            <select 
+            <select
               id="sort"
-              value={sortBy} 
+              value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="border border-gray-300 rounded-md px-3 py-1 text-sm"
             >
@@ -200,242 +190,163 @@ const TextbookList = () => {
               <option value="price-high">Price: High to Low</option>
             </select>
           </div>
-
-          {/* Chat Toggle Button */}
-          <button
-            onClick={() => setShowChat(!showChat)}
-            className="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
-          >
-            <MessageSquare size={18} className="mr-2" />
-            Messages {conversations.length > 0 && `(${conversations.length})`}
-          </button>
         </div>
       </div>
 
-      <div className="flex gap-6">
-        {/* Textbook List */}
-        <div className={`${showChat ? 'w-2/3' : 'w-full'}`}>
-          {sortedTextbooks.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow">
-              <BookOpen size={48} className="mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No textbooks found</h3>
-              <p className="text-gray-500">Try selecting a different category or check back later.</p>
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {sortedTextbooks.map((book) => (
-                <div key={book._id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                  {/* Book Image */}
-                  <div className="h-48 overflow-hidden bg-gray-100 relative">
-                    {book.fileType === 'image' ? (
-                      <img 
-                        src={book.fileUrl} 
-                        alt={book.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.src = 'https://via.placeholder.com/300x200?text=Image+Not+Found';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                        <div className="text-center p-4">
-                          <BookOpen size={48} className="mx-auto text-gray-400 mb-2" />
-                          <p className="text-sm text-gray-500">{book.fileType.toUpperCase()} File</p>
-                        </div>
+      {/* Textbook List */}
+      <div>
+        {sortedTextbooks.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow">
+            <BookOpen size={48} className="mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No textbooks found</h3>
+            <p className="text-gray-500">Try selecting a different category or check back later.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {sortedTextbooks.map((book) => (
+              <div key={book._id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                {/* Book Image */}
+                <div className="h-48 overflow-hidden bg-gray-100 relative">
+                  {book.fileType === 'image' ? (
+                    <img 
+                      src={book.fileUrl} 
+                      alt={book.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/300x200?text=Image+Not+Found';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                      <div className="text-center p-4">
+                        <BookOpen size={48} className="mx-auto text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-500">{book.fileType.toUpperCase()} File</p>
                       </div>
-                    )}
-                    
-                    {/* Condition badge */}
-                    {book.condition && (
-                      <span className="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                        {book.condition}
-                      </span>
-                    )}
+                    </div>
+                  )}
+                  
+                  {/* Condition badge */}
+                  {book.condition && (
+                    <span className="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                      {book.condition}
+                    </span>
+                  )}
+                </div>
+                
+                {/* Book Details */}
+                <div className="p-4">
+                  <h3 className="text-lg font-bold text-gray-800 mb-1 truncate">{book.title}</h3>
+                  <p className="text-sm text-gray-600 mb-2">by {book.author || 'Unknown Author'}</p>
+                  
+                  <div className="flex items-center text-sm text-gray-500 mb-3">
+                    <User size={14} className="mr-1" />
+                    <span>{book.uploaderUsername || 'Anonymous'}</span>
                   </div>
                   
-                  {/* Book Details */}
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-gray-800 mb-1 truncate">{book.title}</h3>
-                    <p className="text-sm text-gray-600 mb-2">by {book.author || 'Unknown Author'}</p>
-                    
-                    <div className="flex items-center text-sm text-gray-500 mb-3">
-                      <User size={14} className="mr-1" />
-                      <span>{book.uploaderUsername || 'Anonymous'}</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center text-green-600 font-bold">
+                      <DollarSign size={16} />
+                      <span>{formatPrice(book.price)}</span>
                     </div>
                     
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center text-green-600 font-bold">
-                        <DollarSign size={16} />
-                        <span>{formatPrice(book.price)}</span>
-                      </div>
-                      
-                      <div className="flex items-center text-xs text-gray-500">
-                        <Calendar size={12} className="mr-1" />
-                        <span>{formatDate(book.createdAt)}</span>
-                      </div>
-                    </div>
-                    
-                    {book.edition && (
-                      <p className="text-sm text-gray-600 mb-2">Edition: {book.edition}</p>
-                    )}
-                    
-                    {book.description && (
-                      <p className="text-sm text-gray-700 mb-4 line-clamp-2">{book.description}</p>
-                    )}
-                    
-                    {book.isFlexible && (
-                      <p className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full inline-block mb-3">
-                        Open to Flexible Exchange
-                      </p>
-                    )}
-                    
-                    {/* Action Buttons */}
-                    <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-100">
-                      <a
-                        href={book.fileUrl}
-                        download
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
-                      >
-                        <Download size={16} className="mr-1" />
-                        Download
-                      </a>
-                      
-                      <button
-                        onClick={() => startConversation(book)}
-                        className="flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium"
-                      >
-                        <MessageSquare size={16} className="mr-1" />
-                        Contact
-                      </button>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <Calendar size={12} className="mr-1" />
+                      <span>{formatDate(book.createdAt)}</span>
                     </div>
                   </div>
+                  
+                  {book.edition && (
+                    <p className="text-sm text-gray-600 mb-2">Edition: {book.edition}</p>
+                  )}
+                  
+                  {book.description && (
+                    <p className="text-sm text-gray-700 mb-4 line-clamp-2">{book.description}</p>
+                  )}
+                  
+                  {book.isFlexible && (
+                    <p className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full inline-block mb-3">
+                      Open to Flexible Exchange
+                    </p>
+                  )}
+                  
+                  {/* Action Buttons */}
+                  <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-100">
+                    <a
+                      href={book.fileUrl}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      <Download size={16} className="mr-1" />
+                      Download
+                    </a>
+                    
+                    <button
+                      onClick={() => openEmailModal(book)}
+                      className="flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                    >
+                      <Mail size={16} className="mr-1" />
+                      Contact
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-        {/* Chat Sidebar */}
-        {showChat && (
-          <div className="w-1/3 bg-white rounded-lg shadow-md h-[calc(100vh-200px)] flex flex-col">
-            {/* Chat Header */}
+      {/* Email Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
             <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="font-semibold text-gray-800">Messages</h3>
+              <h3 className="font-semibold text-gray-800">Contact Seller</h3>
               <button 
-                onClick={() => setShowChat(false)}
+                onClick={() => setShowEmailModal(false)}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <X size={20} />
               </button>
             </div>
-
-            {/* Conversations List */}
-            {!selectedConversation ? (
-              <div className="flex-1 overflow-y-auto">
-                {conversations.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500">
-                    No conversations yet. Start a conversation by clicking "Contact" on a textbook.
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {conversations.map(conversation => (
-                      <div 
-                        key={conversation._id} 
-                        className="p-4 hover:bg-gray-50 cursor-pointer"
-                        onClick={() => setSelectedConversation({
-                          textbookId: conversation.textbook._id,
-                          userId: conversation.participants.find(p => p._id !== req.user._id)._id,
-                          textbookTitle: conversation.textbook.title,
-                          userName: conversation.participants.find(p => p._id !== req.user._id).username
-                        })}
-                      >
-                        <div className="font-medium">{conversation.textbook.title}</div>
-                        <div className="text-sm text-gray-500">With {conversation.participants.find(p => p._id !== req.user._id).username}</div>
-                        {conversation.lastMessage && (
-                          <div className="text-sm text-gray-600 truncate mt-1">
-                            {conversation.lastMessage.text}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+            
+            <div className="p-4">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  You're contacting the seller of: <strong>{selectedBook.title}</strong>
+                </p>
+                <p className="text-sm text-gray-600">
+                  Your message will be sent from: <strong>{userEmail}</strong>
+                </p>
               </div>
-            ) : (
-              /* Chat Messages */
-              <div className="flex-1 flex flex-col">
-                {/* Chat Header */}
-                <div className="p-4 border-b flex items-center">
-                  <button 
-                    onClick={() => setSelectedConversation(null)}
-                    className="mr-2 text-gray-500 hover:text-gray-700"
-                  >
-                    <X size={18} />
-                  </button>
-                  <div>
-                    <div className="font-medium">{selectedConversation.textbookTitle}</div>
-                    <div className="text-sm text-gray-500">With {selectedConversation.userName}</div>
-                  </div>
-                </div>
-
-                {/* Messages Container */}
-                <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                  {chatLoading ? (
-                    <div className="text-center text-gray-500">Loading messages...</div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
-                      No messages yet. Start the conversation!
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {messages.map(message => (
-                        <div 
-                          key={message._id} 
-                          className={`flex ${message.sender._id === req.user._id ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div 
-                            className={`max-w-xs px-4 py-2 rounded-lg ${message.sender._id === req.user._id 
-                              ? 'bg-indigo-600 text-white' 
-                              : 'bg-white border border-gray-200 text-gray-800'}`}
-                          >
-                            <p>{message.text}</p>
-                            <p className={`text-xs mt-1 ${message.sender._id === req.user._id ? 'text-indigo-200' : 'text-gray-500'}`}>
-                              {new Date(message.createdAt).toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Message Input */}
-                <div className="p-4 border-t">
-                  <div className="flex">
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type your message..."
-                      className="flex-1 border border-gray-300 rounded-l-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    />
-                    <button
-                      onClick={sendMessage}
-                      disabled={!newMessage.trim()}
-                      className="bg-indigo-600 text-white px-4 py-2 rounded-r-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Send size={18} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+              
+              <textarea
+                value={emailContent}
+                onChange={(e) => setEmailContent(e.target.value)}
+                placeholder="Write your message to the seller..."
+                className="w-full h-40 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div className="p-4 border-t flex justify-end gap-2">
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={sendEmail}
+                disabled={!emailContent.trim() || emailLoading}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {emailLoading ? 'Sending...' : 'Send Email'}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
