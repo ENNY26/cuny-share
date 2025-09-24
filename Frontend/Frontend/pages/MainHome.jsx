@@ -41,7 +41,7 @@ const MainHome = () => {
           </div>
 
           <div 
-            onClick={() => navigate('/textbook')}
+            onClick={() => navigate('/textbooks')}
             className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="text-4xl mb-4">📖</div>
