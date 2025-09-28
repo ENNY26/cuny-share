@@ -28,21 +28,6 @@ const ForgotPassword = () => {
     }
   };
 
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      await axios.post('/api/auth/verify-otp', { email, otp });
-      setMessage('OTP verified! Set your new password');
-      setStep(3);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Invalid OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -65,6 +50,22 @@ const ForgotPassword = () => {
       setMessage('New OTP sent!');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to resend OTP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+   const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      // call verify-reset-otp (validates reset OTP only)
+      await axios.post('/api/auth/verify-reset-otp', { email, otp });
+      setMessage('OTP verified! Set your new password');
+      setStep(3);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid OTP');
     } finally {
       setLoading(false);
     }

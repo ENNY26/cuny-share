@@ -153,6 +153,31 @@ export const forgotPassword = async (req, res) => {
   }
 }
 
+export const verifyResetOtp = async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({ message: 'Email and OTP are required' });
+  }
+
+  try {
+    const existing = await OTP.findOne({ email, purpose: 'reset' }).sort({ createdAt: -1 });
+    if (!existing) return res.status(400).json({ message: 'OTP not found. Please request a new one.' });
+
+    if (String(existing.otp).trim() !== String(otp).trim()) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    if (existing.expiresAt < new Date()) {
+      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    }
+
+    return res.status(200).json({ message: 'OTP verified' });
+  } catch (err) {
+    console.error('verifyResetOtp error:', err);
+    return res.status(500).json({ message: 'Verification failed', error: err.message });
+  }
+};
 // RESET PASSWORD
 
 export const resetPassword = async (req, res) => {
