@@ -1,20 +1,24 @@
 import mongoose from 'mongoose';
 
 const textbookSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  author: { type: String },
-  edition: { type: String },
-  condition: { type: String }, // e.g., New, Good, Used
-  price: { type: Number }, // optional
-  fileUrl: { type: String, required: true },
-  fileType: { type: String }, // pdf, docx, pptx, image
-  uploader: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  uploaderUsername: { type: String, required: true },
-  uploaderEmail: { type: String },
-  isFlexible: { type: Boolean, default: false }, // for exchange flexibility
-  likes: { type: [String], default: [] },
-  views: { type: Number, default: 0 },
-}, { timestamps: true });
+  title: String,
+  author: String,
+  edition: String,
+  condition: String,
+  price: Number,
+  isFlexible: Boolean,
+  description: String,
+  fileUrl: String,                 // first file (backward compat)
+  fileKey: String,
+  fileType: String,
+  fileUrls: [String],             // new: array of uploaded file URLs
+  fileKeys: [String],
+  fileTypes: [String],
+  uploader: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  uploaderUsername: String,
+  uploaderEmail: { type: String, index: true }, // store uploader's registered email
+  createdAt: { type: Date, default: Date.now }
+});
 
 const Textbook = mongoose.model('Textbook', textbookSchema);
 export default Textbook;

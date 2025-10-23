@@ -1,75 +1,46 @@
-import Textbook from "../models/Textbook.js";
-import User from "../models/User.js";
-
-// File type mapping for better organization
-const FILE_TYPES = {
-  pdf: ['pdf'],
-  image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'],
-  docx: ['doc', 'docx'],
-  pptx: ['ppt', 'pptx'],
-  xlsx: ['xls', 'xlsx'],
-  other: []
-};
-
-// Helper function to determine file type
-const getFileType = (extension) => {
-  for (const [type, extensions] of Object.entries(FILE_TYPES)) {
-    if (extensions.includes(extension)) {
-      return type;
-    }
-  }
-  return 'other';
-};
+import Textbook from '../models/Textbook.js';
+import { getFileType } from './helpers.js'; // assume helper exists or inline
 
 export const uploadTextbook = async (req, res) => {
   try {
-    const { title, author, edition, condition, price, isFlexible } = req.body;
+    const { title, author, edition, condition, price, isFlexible, description } = req.body;
 
-    if (!req.file) {
-      return res.status(400).json({ message: 'File is required' });
+    // ensure files exist (supports multer array upload)
+    const files = req.files || [];
+    if (!files.length) {
+      return res.status(400).json({ message: 'At least one file is required' });
     }
 
-    const extension = req.file.originalname.split('.').pop().toLowerCase();
-    const fileType = getFileType(extension);
+    // map uploaded files (S3 or local). adjust keys to your multer file properties
+    const fileUrls = files.map(f => f.location || f.path || f.url);
+    const fileKeys = files.map(f => f.key || f.filename || null);
+    const fileTypes = files.map(f => getFileType((f.mimetype || f.originalname || '').split('/').pop()));
 
-    if (!title || !author || !edition || !condition || !price) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    if (isNaN(price) || parseFloat(price) <= 0) {
-      return res.status(400).json({ message: 'Price must be a positive number' });
-    }
-
-    const textbook = new Textbook({
+    // create textbook - keep backward-compatible single-file fields using first item
+    const newTextbook = new Textbook({
       title,
       author,
       edition,
       condition,
-      price: parseFloat(price),
+      price: price ? Number(price) : undefined,
       isFlexible: isFlexible === 'true' || isFlexible === true,
-      fileUrl: req.file.location,
-      fileType,
+      description,
+      fileUrl: fileUrls[0],
+      fileKey: fileKeys[0],
+      fileType: fileTypes[0],
+      fileUrls,
+      fileKeys,
+      fileTypes,
       uploader: req.user._id,
       uploaderUsername: req.user.username,
-      uploaderEmail: req.user.email,
+      uploaderEmail: req.user.email
     });
 
-    await textbook.save();
-    
-    // Populate uploader info for response
-    await textbook.populate('uploader', 'username email');
-    
-    res.status(201).json({ 
-      message: 'Textbook uploaded successfully', 
-      textbook 
-    });
-    
-  } catch (error) {
-    console.error('Error uploading textbook:', error);
-    res.status(500).json({ 
-      message: 'Upload failed', 
-      error: error.message 
-    });
+    await newTextbook.save();
+    res.status(201).json(newTextbook);
+  } catch (err) {
+    console.error('uploadTextbook error:', err);
+    res.status(500).json({ message: 'Failed to upload textbook', error: err.message });
   }
 };
 

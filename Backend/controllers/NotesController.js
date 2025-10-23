@@ -5,7 +5,7 @@ import { deleteFileFromS3 } from "../utils/s3Delete.js";
 // UPLOAD NOTE
 export const uploadNote = async (req, res) => {
     try {
-        const { subject, professor, level, description, alumni } = req.body;
+        const { subject, professor, level, description, alumni, courseNumber, course } = req.body;
 
         if(!req.file){
             return res.status(400).json({ message: "File is required." });
@@ -15,22 +15,21 @@ export const uploadNote = async (req, res) => {
         const fileKey = req.file.key; // Make sure this is being stored
         const fileType = req.file.mimetype;
 
-        const newNote = new Note({
-            subject,
-            professor,
-            level,
-            description,
-            alumni: alumni === 'true',
-            fileUrl,
-            fileKey, // Store the file key for S3 operations
-            fileType,
-            uploader: req.user._id,
-            uploaderUsername: req.user.username,
-            uploaderEmail: req.user.email,
+        const note = new Note({
+          subject,
+          professor,
+          level,
+          description,
+          alumni,
+          courseNumber: courseNumber || course, // <- ensure stored
+          fileUrl,
+          fileKey,
+          fileType,
+          uploader: req.user._id,
         });
 
-        await newNote.save();
-        return res.status(201).json({ message: "Note uploaded successfully", note: newNote });
+        await note.save();
+        return res.status(201).json({ message: "Note uploaded successfully", note });
 
     } catch (error) {
         console.error("Error uploading note:", error);

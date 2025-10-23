@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext.jsx';
 import axios from '../src/api/axios';
 import { toast } from 'react-toastify';
 import { Download, MessageSquare, Eye, User, BookOpen, DollarSign, Calendar, X, Send, Mail } from 'lucide-react';
 
 const TextbookList = () => {
-  const token = localStorage.getItem('token');
-  const [userEmail, setUserEmail] = useState('');
+  const { token, user } = useAuth(); // <-- use auth context, provides registered email
+  const [userEmail, setUserEmail] = useState(user?.email || '');
 
   const [textbooks, setTextbooks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +59,11 @@ const TextbookList = () => {
     fetchTextbooks();
   }, [token]);
 
+  useEffect(() => {
+    // ensure local userEmail is set when auth changes
+    setUserEmail(user?.email || '');
+  }, [user]);
+
   const openEmailModal = (book) => {
     setSelectedBook(book);
     setEmailContent(`Hello, I'm interested in your textbook "${book.title}" listed on the marketplace.`);
@@ -72,33 +78,59 @@ const TextbookList = () => {
 
     try {
       setEmailLoading(true);
-      
-      // Get the uploader's email
-      const uploaderId = selectedBook.uploader?._id || selectedBook.uploader;
-      const uploaderRes = await axios.get(`/api/user/${uploaderId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      
-      const uploaderEmail = uploaderRes.data.email;
-      
-      // Send email via your backend
-      await axios.post('/api/send-email', {
+
+      // Prefer uploaderEmail saved on the textbook record
+      let uploaderEmail = selectedBook.uploaderEmail || selectedBook.uploader?.email;
+
+      // If uploaderEmail not present, fallback to uploader id fetch OR mailto
+      if (!uploaderEmail) {
+        const uploaderId = selectedBook.uploader?._id || selectedBook.uploader;
+        if (uploaderId) {
+          // Try to fetch uploader (optional)
+          try {
+            const res = await axios.get(`/api/users/${uploaderId}`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+            uploaderEmail = res.data.email;
+          } catch (err) {
+            console.warn('Could not fetch uploader email, will open mail client instead', err);
+          }
+        }
+      }
+
+      const payload = {
         to: uploaderEmail,
         from: userEmail,
         subject: `Inquiry about: ${selectedBook.title}`,
         text: emailContent,
         textbookId: selectedBook._id,
         textbookTitle: selectedBook.title
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      };
 
-      toast.success('Email sent successfully!');
+      if (uploaderEmail) {
+        // Try backend send-email if route exists
+        try {
+          await axios.post('/api/send-email', payload, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          });
+          toast.success('Email sent successfully!');
+        } catch (err) {
+          // If backend route missing (404) or fails, fallback to mailto
+          console.warn('Backend email send failed, falling back to mailto', err);
+          const mailto = `mailto:${encodeURIComponent(uploaderEmail)}?subject=${encodeURIComponent(payload.subject)}&body=${encodeURIComponent(payload.text)}`;
+          window.location.href = mailto;
+          toast.info('Opening mail client...');
+        }
+      } else {
+        // No uploader email anywhere — show error
+        toast.error('Uploader email not available');
+      }
+
       setShowEmailModal(false);
       setEmailContent('');
     } catch (err) {
       console.error('Send email error:', err);
-      toast.error(err.response?.data?.message || 'Failed to send email');
+      toast.error(err.response?.data?.message || err.message || 'Failed to send email');
     } finally {
       setEmailLoading(false);
     }

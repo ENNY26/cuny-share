@@ -1,18 +1,12 @@
 import express from 'express';
 import auth from '../middleware/auth.js';
-import upload from '../utils/s3Upload.js';
-import {
-  uploadTextbook,
-  getAllTextbooks,
-  getTextbookById,
-  deleteTextbook
-} from '../controllers/TextbookController.js';
+import upload from '../middleware/upload.js'; // your multer/s3 middleware
+import { uploadTextbook, getAllTextbooks } from '../controllers/TextbookController.js';
 
 const router = express.Router();
 
-router.post('/upload', auth, upload.single('file'), uploadTextbook);
+// change single -> array('files', maxCount)
+router.post('/', auth, upload.array('files', 6), uploadTextbook);
 router.get('/', getAllTextbooks);
-router.get('/:id', getTextbookById);
-router.delete('/:id', auth, deleteTextbook);
 
 export default router;

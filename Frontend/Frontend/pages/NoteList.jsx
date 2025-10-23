@@ -28,17 +28,23 @@ import { motion } from 'framer-motion';
 const FilePreviewModal = ({ note, isOpen, onClose }) => {
   if (!isOpen || !note) return null;
 
+  const fileExt = (note.fileUrl?.split('.').pop() || '').toLowerCase();
+  const isSlide = ['ppt', 'pptx'].includes(fileExt);
+
   const docs = [
     {
       uri: note.fileUrl,
-      fileType: note.fileUrl.split('.').pop().toLowerCase()
+      fileType: fileExt
     }
   ];
 
-  
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-60 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-lg w-full max-w-[90vw] max-h-[95vh] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-60 p-2 backdrop-blur-sm">
+      <div
+        className={`bg-white rounded-lg w-full flex flex-col ${
+          isSlide ? 'max-w-[98vw] max-h-[98vh]' : 'max-w-[90vw] max-h-[95vh]'
+        }`}
+      >
         <div className="flex justify-between items-center p-4 border-b">
           <h3 className="text-lg font-semibold truncate">{note.subject}</h3>
           <button
@@ -50,24 +56,27 @@ const FilePreviewModal = ({ note, isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="flex-1 overflow-auto">
-          <DocViewer
-            documents={docs}
-            pluginRenderers={DocViewerRenderers}
-            config={{
-              header: {
-                disableHeader: false,
-                disableFileName: false,
-                retainURLParams: false
-              }
-            }}
-            style={{ height: '80vh', width: '100%' }}
-          />
+        <div className="flex-1 overflow-auto flex items-center justify-center">
+          <div className="w-full">
+            <DocViewer
+              documents={docs}
+              pluginRenderers={DocViewerRenderers}
+              config={{
+                header: {
+                  disableHeader: false,
+                  disableFileName: false,
+                  retainURLParams: false
+                }
+              }}
+              // larger height for slides
+              style={{ height: isSlide ? '92vh' : '80vh', width: '100%' }}
+            />
+          </div>
         </div>
 
         <div className="p-4 border-t flex justify-between items-center bg-gray-50">
           <p className="text-sm text-gray-600">
-            {note.fileUrl.split('.').pop().toUpperCase()} file
+            {fileExt.toUpperCase()} file
           </p>
         </div>
       </div>
@@ -104,6 +113,9 @@ const NoteCard = ({ note, onSave, onLike, onDelete, onEdit, onView, isOwner, isS
   const fileExtension = note.fileUrl?.split('.').pop()?.toLowerCase() || 'file';
   const supportedPreview = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt'];
   const canPreview = supportedPreview.includes(fileExtension);
+
+  // normalized course display (fallbacks for different backend field names)
+  const course = note.courseNumber || note.course || note.courseCode || note.courseTitle || 'N/A';
 
   return (
     <>
@@ -189,7 +201,7 @@ const NoteCard = ({ note, onSave, onLike, onDelete, onEdit, onView, isOwner, isS
               <BookOpen className="mr-1" size={14} /> {note.level}
             </span>
             <span className="flex items-center">
-              <GraduationCap className="mr-1" size={14} /> {note.courseNumber || 'N/A'}
+              <GraduationCap className="mr-1" size={14} /> {course}
             </span>
           </div>
           
