@@ -1,130 +1,111 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import axios from '../src/api/axios'; // your custom axios instance or just 'axios'
+import axios from '../src/api/axios';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const UploadNote = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
 
-  const [file, setFile] = useState(null);
-  const [formData, setFormData] = useState({
-    subject: '',
-    professor: '',
-    level: '',
-    description: '',
-    isAlumni: false,
-  });
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [category, setCategory] = useState('general');
+  const [condition, setCondition] = useState('used');
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+  const handleFiles = (e) => {
+    setFiles(Array.from(e.target.files || []));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!file) return toast.error('Please select a file');
-
-    const data = new FormData();
-    data.append('file', file);
-    Object.entries(formData).forEach(([key, val]) => {
-      data.append(key, val);
-    });
-
+    if (!title) return toast.error('Title required');
+    setLoading(true);
     try {
-      await axios.post('/api/notes/upload', data, {
+      const fd = new FormData();
+      fd.append('title', title);
+      fd.append('description', description);
+      fd.append('price', price);
+      fd.append('category', category);
+      fd.append('condition', condition);
+      files.forEach((f) => fd.append('files', f));
+      const res = await axios.post('/api/products', fd, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
-
-      toast.success('Note uploaded successfully!');
-      console.log('Note uploaded successfully');
-      navigate('/notes');
+      toast.success('Listing created');
+      navigate('/');
     } catch (err) {
+      console.error('Upload error', err);
       toast.error(err.response?.data?.message || 'Upload failed');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white shadow rounded mt-8">
-      <h2 className="text-2xl font-semibold mb-6 text-center text-indigo-700">Upload a Note</h2>
-
+    <div className="p-6 max-w-3xl mx-auto">
+      <h2 className="text-xl font-bold mb-4">Create Listing</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
-          type="file"
-          onChange={(e) => setFile(e.target.files[0])}
-          required
-          className="block w-full text-sm border border-gray-300 p-2 rounded"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Title"
+          className="w-full border p-2"
         />
-
-        <input
-          type="text"
-          name="subject"
-          placeholder="Subject"
-          value={formData.subject}
-          onChange={handleChange}
-          required
-          className="w-full border border-gray-300 p-2 rounded"
-        />
-
-        <input
-          type="text"
-          name="professor"
-          placeholder="Professor"
-          value={formData.professor}
-          onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded"
-        />
-
-        <input
-          type="text"
-          name="level"
-          placeholder="Course Level"
-          value={formData.level}
-          onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded"
-        />
-        <input
-          type="text"
-          name="course number"
-          placeholder="Please enter course name and number i.e. CSCI 1234"
-          value={formData.courseNumber}
-          onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded"
-        />
-
         <textarea
-          name="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder="Description"
-          value={formData.description}
-          onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded"
+          className="w-full border p-2"
         />
-
-        <label className="inline-flex items-center">
-          <input
-            type="checkbox"
-            name="isAlumni"
-            checked={formData.isAlumni}
-            onChange={handleChange}
-            className="mr-2"
-          />
-          This is an alumni note
-        </label>
-
-        <button
-          type="submit"
-          className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 transition"
+        <input
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          placeholder="Price (0 for free)"
+          className="w-full border p-2"
+        />
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full border p-2"
         >
-          Upload Note
-        </button>
+          <option value="general">General</option>
+          <option value="clothing">Clothing</option>
+          <option value="furniture">Furniture</option>
+          <option value="electronics">Electronics</option>
+          <option value="books">Books</option>
+        </select>
+        <select
+          value={condition}
+          onChange={(e) => setCondition(e.target.value)}
+          className="w-full border p-2"
+        >
+          <option value="new">New</option>
+          <option value="like-new">Like New</option>
+          <option value="used">Used</option>
+          <option value="poor">Poor</option>
+        </select>
+        <input
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={handleFiles}
+        />
+        <div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-4 py-2 bg-indigo-600 text-white rounded"
+          >
+            {loading ? 'Listing...' : 'Create Listing'}
+          </button>
+        </div>
       </form>
     </div>
   );

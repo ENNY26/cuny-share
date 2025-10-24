@@ -11,6 +11,7 @@ import path from 'path';
 import s3Routes from './routes/s3.routes.js';
 import messageRoutes from './routes/message.routes.js';
 import conversationRoutes from './routes/conversationRoutes.js';
+import productRoutes from './routes/productRoutes.js';
 dotenv.config();
 
 const app = express();
@@ -52,7 +53,7 @@ app.use('/api/textbook', textbookRoutes);
 app.use('/api/s3', s3Routes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/conversations', conversationRoutes);
-
+app.use('/api/products', productRoutes);
 
 
 // Health check
