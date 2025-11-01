@@ -9,6 +9,7 @@ import MainHome from '../pages/MainHome';
 import NoteList from '../pages/NoteList';
 import UploadNote from '../pages/UploadNote'; 
 import TextbookUpload from '../components/TextbookUpload';
+import SwipeView from '../pages/SwipeView';
 
 import './App.css';
 import TextbookList from '../pages/TextbookList';
@@ -35,6 +36,7 @@ function App() {
 
         <Route path="/textbooks" element={<TextbookList />} />
         <Route path="/textbooks/upload" element={<TextbookUpload />} />
+        <Route path="/swipe" element={<SwipeView />} />
 
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" />} />
