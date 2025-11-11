@@ -1,10 +1,11 @@
 import express from 'express';
 import auth from '../middleware/auth.js';
-import { getUserProfile } from '../controllers/UserController.js';
+import { getUserProfile, updateUserProfile, addPoints } from '../controllers/UserController.js';
 
 const router = express.Router();
 
-// Protected route to get profile
-router.get('/profile', auth, getUserProfile);
+router.get('/:id', auth, getUserProfile);
+router.put('/:id', auth, updateUserProfile);
+router.post('/:id/points', auth, addPoints); // admin or system only
 
 export default router;

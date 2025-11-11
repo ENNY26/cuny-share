@@ -1,29 +1,67 @@
 import User from '../models/User.js';
-import Note from '../models/Notes.js';
+import Product from '../models/Product.js';
 
 export const getUserProfile = async (req, res) => {
   try {
-    const userId = req.user.id; // from auth middleware
-
-    // Get basic user info
-    const user = await User.findById(userId).select('-password -verificationCode');
+    const { id } = req.params;
+    const user = await User.findById(id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Get user's uploaded notes
-    const notes = await Note.find({ uploader: userId });
+    // get user's listings
+    const listings = await Product.find({ seller: id }).sort({ createdAt: -1 });
 
-    // (Later) Get user's uploaded textbooks
-    // const textbooks = await Textbook.find({ uploader: userId });
+    // get user's saved products (if current user is requesting own profile)
+    let saved = [];
+    if (String(req.user?._id) === String(id)) {
+      // TODO: implement saved products retrieval if you track saves in User model
+      // for now, return empty
+    }
 
-    res.json({
+    res.status(200).json({
       user,
-      contributions: {
-        notes,
-        textbooks: [] // placeholder for now
-      }
+      listings,
+      saved,
+      listingsCount: listings.length
     });
-  } catch (error) {
-    console.error('Error fetching profile:', error);
-    res.status(500).json({ message: 'Server error' });
+  } catch (err) {
+    console.error('getUserProfile error:', err);
+    res.status(500).json({ message: 'Failed to fetch user profile', error: err.message });
+  }
+};
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (String(req.user?._id) !== String(id)) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const { school, major, bio } = req.body;
+    const user = await User.findByIdAndUpdate(
+      id,
+      { school, major, bio, updatedAt: new Date() },
+      { new: true }
+    ).select('-password');
+
+    res.status(200).json(user);
+  } catch (err) {
+    console.error('updateUserProfile error:', err);
+    res.status(500).json({ message: 'Failed to update profile', error: err.message });
+  }
+};
+
+export const addPoints = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { points } = req.body;
+    const user = await User.findByIdAndUpdate(
+      id,
+      { $inc: { points } },
+      { new: true }
+    ).select('-password');
+    res.status(200).json(user);
+  } catch (err) {
+    console.error('addPoints error:', err);
+    res.status(500).json({ message: 'Failed to add points', error: err.message });
   }
 };

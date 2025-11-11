@@ -103,15 +103,16 @@ export const login = async (req, res) => {
         const user = await User.findOne({ email: email.trim() });
         if(!user) return res.status(400).json({message: "User not found"});
 
-        if(!user.isVerified) {
-            console.log(`User ${email} is not verified`);
-            return res.status(400).json({message: "Please verify your email to login"});
-        }
-
         const isMatch = await bcrypt.compare(password.trim(), user.password);
         if(!isMatch) {
             console.log(`Password mismatch for user ${email}`);
             return res.status(400).json({message: "Invalid credentials"});
+        }
+
+        // Auto-verify user if not already verified
+        if (!user.isVerified) {
+            user.isVerified = true;
+            await user.save();
         }
 
         const token = jwt.sign({id: user._id}, process.env.JWT_SECRET, {expiresIn: '7d'});

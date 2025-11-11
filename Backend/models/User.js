@@ -1,16 +1,18 @@
 import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  username: { type: String, required: true, unique: true },
-  school: { type: String, required: true },
-  level: { type: String, required: true },
-  isAlumni: { type: Boolean, required: true },
-  email: { type: String, required: true, unique: true },
+  username: { type: String, required: true, unique: true, trim: true },
+  email: { type: String, required: true, unique: true, trim: true },
   password: { type: String, required: true },
-  isVerified: { type: Boolean, default: false },
-  savedNotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Note' }],
-}, { timestamps: true });
+  school: { type: String, default: 'CUNY' }, // e.g., 'CCNY', 'Hunter', 'Baruch'
+  major: { type: String, default: '' }, // e.g., 'Computer Science'
+  profilePic: { type: String, default: null }, // URL
+  badge: { type: String, enum: ['bronze', 'silver', 'gold', 'platinum', 'none'], default: 'none' },
+  points: { type: Number, default: 0 }, // reward points
+  bio: { type: String, default: '' },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
 
 const User = mongoose.model('User', userSchema);
 export default User;
