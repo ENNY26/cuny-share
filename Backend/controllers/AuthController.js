@@ -8,7 +8,7 @@ import sendEmail from '../utils/sendEmail.js';
 // SIGNUP FUNCTION
 
 export const signup = async (req, res) => {
-  const { name, username, school, level, isAlumni, email, password } = req.body;
+  const { name, username, school, level, isAlumni, email, password, signupQuestions } = req.body;
 
   if (!password || password.length < 6) {
     return res.status(400).json({ message: 'Password must be at least 6 characters long' });
@@ -34,6 +34,7 @@ export const signup = async (req, res) => {
       school,
       level,
       isAlumni,
+      signupQuestions: signupQuestions || {},
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min expiry
     });
 
@@ -78,6 +79,7 @@ export const verifyOtp = async (req, res) => {
       isAlumni: existing.isAlumni,
       email: existing.email,
       password: existing.password,
+      signupQuestions: existing.signupQuestions || {},
       isVerified: true,
     });
 

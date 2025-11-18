@@ -1,13 +1,24 @@
 import express from 'express'
 import auth from '../middleware/auth.js'
 import upload from '../utils/s3Upload.js'
-import { deleteNote, getAllNotes, getSavedNotes, likeNote, saveNote, searchAndFilterNotes, updateNote, uploadNote, viewNote } from '../controllers/NotesController.js'
+import { deleteNote, getAllNotes, getSavedNotes, likeNote, saveNote, searchAndFilterNotes, updateNote, uploadNote, viewNote, getTrendingPosts, addComment } from '../controllers/NotesController.js'
 
 const router = express.Router();
 
-router.post('/upload', auth, upload.single('file'), uploadNote);
+// Handle both single file (legacy notes) and multiple files (forum posts)
+router.post('/upload', auth, (req, res, next) => {
+  // Use fields to handle both 'file' and 'files'
+  upload.fields([{ name: 'files', maxCount: 5 }, { name: 'file', maxCount: 1 }])(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message || 'File upload error' });
+    }
+    next();
+  });
+}, uploadNote);
 router.get('/', getAllNotes)
+router.get('/trending', getTrendingPosts)
 router.post('/:id/like', auth, likeNote)
+router.post('/:id/comment', auth, addComment)
 router.get('/search', searchAndFilterNotes)
 router.delete('/:id', auth, deleteNote);
 router.put('/:id', auth, updateNote)

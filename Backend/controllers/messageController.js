@@ -1,18 +1,24 @@
+import mongoose from 'mongoose';
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 
 
 export const sendMessage = async (req, res) => {
   try {
-    const { recipient, text, textbook } = req.body;
+    const { recipient, text, textbook, product, note } = req.body;
 
-    if (!recipient || !text || !textbook) {
-      return res.status(400).json({ message: 'recipient, text and textbook are required' });
+    if (!recipient || !text) {
+      return res.status(400).json({ message: 'recipient and text are required' });
+    }
+
+    // At least one context (textbook, product, or note) should be provided
+    if (!textbook && !product && !note) {
+      return res.status(400).json({ message: 'textbook, product, or note is required' });
     }
 
     // validate ids to avoid Mongoose CastError / bad input
-    if (!mongoose.Types.ObjectId.isValid(recipient) || !mongoose.Types.ObjectId.isValid(textbook)) {
-      return res.status(400).json({ message: 'Invalid recipient or textbook id' });
+    if (!mongoose.Types.ObjectId.isValid(recipient)) {
+      return res.status(400).json({ message: 'Invalid recipient id' });
     }
 
     // prevent sending to self (optional)
@@ -20,31 +26,46 @@ export const sendMessage = async (req, res) => {
       return res.status(400).json({ message: 'Cannot send message to yourself' });
     }
 
-    const message = await Message.create({
+    const messageData = {
       sender: req.user._id,
       recipient: recipient,
-      textbook: textbook,
       text
-    });
+    };
 
-    await message.populate('sender', 'username profilePicture');
+    if (textbook) messageData.textbook = textbook;
+    if (product) messageData.product = product;
+    if (note) messageData.note = note;
 
-    // Ensure upsert creates a conversation with participants and textbook set
+    const message = await Message.create(messageData);
+    await message.populate('sender', 'username profilePic badge');
+
+    // Build conversation query
+    const conversationQuery = {
+      participants: { $all: [req.user._id, recipient] }
+    };
+
+    if (textbook) conversationQuery.textbook = textbook;
+    if (product) conversationQuery.product = product;
+    if (note) conversationQuery.note = note;
+
+    // Ensure upsert creates a conversation with participants and context set
+    const conversationData = {
+      $set: {
+        lastMessage: message._id,
+        updatedAt: new Date()
+      },
+      $setOnInsert: {
+        participants: [req.user._id, recipient]
+      }
+    };
+
+    if (textbook) conversationData.$setOnInsert.textbook = textbook;
+    if (product) conversationData.$setOnInsert.product = product;
+    if (note) conversationData.$setOnInsert.note = note;
+
     await Conversation.findOneAndUpdate(
-      {
-        participants: { $all: [req.user._id, recipient] },
-        textbook: textbook
-      },
-      {
-        $set: {
-          lastMessage: message._id,
-          updatedAt: new Date()
-        },
-        $setOnInsert: {
-          participants: [req.user._id, recipient],
-          textbook
-        }
-      },
+      conversationQuery,
+      conversationData,
       { upsert: true, new: true }
     );
 
@@ -60,24 +81,51 @@ export const getMessages = async (req, res) => {
   try {
     const { userId } = req.query;
     const textbookId = req.query.textbookId || req.query.textbook;
+    const productId = req.query.productId || req.query.product;
+    const noteId = req.query.noteId || req.query.note;
 
-    if (!userId || !textbookId) {
-      return res.status(400).json({ message: 'userId and textbookId are required' });
+    if (!userId) {
+      return res.status(400).json({ message: 'userId is required' });
+    }
+
+    // At least one context should be provided
+    if (!textbookId && !productId && !noteId) {
+      return res.status(400).json({ message: 'textbookId, productId, or noteId is required' });
     }
 
     // validate ObjectId format to avoid Mongoose CastError
-    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(textbookId)) {
-      return res.status(400).json({ message: 'Invalid userId or textbookId' });
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid userId' });
     }
 
-    const messages = await Message.find({
+    const messageQuery = {
       $or: [
         { sender: req.user._id, recipient: userId },
         { sender: userId, recipient: req.user._id }
-      ],
-      textbook: textbookId
-    })
-      .populate('sender', 'username profilePicture')
+      ]
+    };
+
+    if (textbookId) {
+      if (!mongoose.Types.ObjectId.isValid(textbookId)) {
+        return res.status(400).json({ message: 'Invalid textbookId' });
+      }
+      messageQuery.textbook = textbookId;
+    }
+    if (productId) {
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
+        return res.status(400).json({ message: 'Invalid productId' });
+      }
+      messageQuery.product = productId;
+    }
+    if (noteId) {
+      if (!mongoose.Types.ObjectId.isValid(noteId)) {
+        return res.status(400).json({ message: 'Invalid noteId' });
+      }
+      messageQuery.note = noteId;
+    }
+
+    const messages = await Message.find(messageQuery)
+      .populate('sender', 'username profilePic badge')
       .sort({ createdAt: 1 });
 
     res.status(200).json(messages);

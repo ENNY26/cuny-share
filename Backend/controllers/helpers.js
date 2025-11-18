@@ -19,7 +19,36 @@ export function getFileType(mimeOrExt = '') {
 
 export function getFileUrl(file) {
   if (!file) return null;
-  return file.location || file.url || file.path || null;
+  
+  // If it's an S3 URL (location), return as is
+  if (file.location) return file.location;
+  
+  // If it's already a URL, return as is
+  if (file.url && (file.url.startsWith('http://') || file.url.startsWith('https://'))) {
+    return file.url;
+  }
+  
+  // If it's a local file path, convert to URL
+  if (file.path) {
+    // Check if it's already a URL path
+    if (file.path.startsWith('/uploads/') || file.path.startsWith('uploads/')) {
+      const cleanPath = file.path.replace(/\\/g, '/').replace(/^uploads\//, '/uploads/');
+      const baseURL = process.env.BACKEND_URL || 'http://localhost:5000';
+      return `${baseURL}${cleanPath}`;
+    }
+    // If it's a full Windows path, extract just the filename
+    const filename = file.path.split(/[/\\]/).pop();
+    const baseURL = process.env.BACKEND_URL || 'http://localhost:5000';
+    return `${baseURL}/uploads/${filename}`;
+  }
+  
+  // If it's just a filename
+  if (file.filename) {
+    const baseURL = process.env.BACKEND_URL || 'http://localhost:5000';
+    return `${baseURL}/uploads/${file.filename}`;
+  }
+  
+  return null;
 }
 
 export function getFileKey(file) {

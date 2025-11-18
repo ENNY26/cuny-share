@@ -3,7 +3,10 @@ import mongoose from 'mongoose';
 
 const conversationSchema = new mongoose.Schema({
   participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  textbook: { type: mongoose.Schema.Types.ObjectId, ref: 'Textbook', required: true },
+  // Support multiple context types
+  textbook: { type: mongoose.Schema.Types.ObjectId, ref: 'Textbook' },
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+  note: { type: mongoose.Schema.Types.ObjectId, ref: 'Note' },
   lastMessage: { type: mongoose.Schema.Types.ObjectId, ref: 'Message' },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }

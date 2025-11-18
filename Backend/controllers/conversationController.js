@@ -8,8 +8,10 @@ export const getConversations = async (req, res) => {
     const conversations = await Conversation.find({
       participants: req.user._id
     })
-    .populate('participants', 'username profilePicture')
+    .populate('participants', 'username profilePic badge')
     .populate('textbook', 'title price images')
+    .populate('product', 'title price images')
+    .populate('note', 'title description images')
     .populate('lastMessage')
     .sort({ updatedAt: -1 });
 
@@ -22,26 +24,47 @@ export const getConversations = async (req, res) => {
 // Create or get conversation
 export const createConversation = async (req, res) => {
   try {
-    const { recipientId, textbookId } = req.body;
+    const { recipientId, textbookId, productId, noteId } = req.body;
+    
+    if (!recipientId) {
+      return res.status(400).json({ message: 'recipientId is required' });
+    }
+
+    if (!textbookId && !productId && !noteId) {
+      return res.status(400).json({ message: 'textbookId, productId, or noteId is required' });
+    }
+
+    const conversationQuery = {
+      participants: { $all: [req.user._id, recipientId] }
+    };
+
+    if (textbookId) conversationQuery.textbook = textbookId;
+    if (productId) conversationQuery.product = productId;
+    if (noteId) conversationQuery.note = noteId;
     
     // Check if conversation already exists
-    let conversation = await Conversation.findOne({
-      participants: { $all: [req.user._id, recipientId] },
-      textbook: textbookId
-    })
-    .populate('participants', 'username profilePicture')
+    let conversation = await Conversation.findOne(conversationQuery)
+    .populate('participants', 'username profilePic badge')
     .populate('textbook', 'title price images')
+    .populate('product', 'title price images')
+    .populate('note', 'title description images')
     .populate('lastMessage');
 
     if (!conversation) {
-      conversation = await Conversation.create({
-        participants: [req.user._id, recipientId],
-        textbook: textbookId
-      });
+      const conversationData = {
+        participants: [req.user._id, recipientId]
+      };
+      if (textbookId) conversationData.textbook = textbookId;
+      if (productId) conversationData.product = productId;
+      if (noteId) conversationData.note = noteId;
+
+      conversation = await Conversation.create(conversationData);
       
       conversation = await Conversation.findById(conversation._id)
-        .populate('participants', 'username profilePicture')
+        .populate('participants', 'username profilePic badge')
         .populate('textbook', 'title price images')
+        .populate('product', 'title price images')
+        .populate('note', 'title description images')
         .populate('lastMessage');
     }
 
@@ -55,8 +78,10 @@ export const createConversation = async (req, res) => {
 export const getConversation = async (req, res) => {
   try {
     const conversation = await Conversation.findById(req.params.id)
-      .populate('participants', 'username profilePicture')
+      .populate('participants', 'username profilePic badge')
       .populate('textbook', 'title price images')
+      .populate('product', 'title price images')
+      .populate('note', 'title description images')
       .populate('lastMessage');
 
     if (!conversation) {

@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { User, LogOut } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 
 const ProfileCard = () => {
   const { user, logout } = useAuth();
@@ -30,7 +31,8 @@ const ProfileCard = () => {
 
   return (
     <div className="fixed top-4 left-4 z-40 bg-white rounded-lg shadow-md border border-gray-200 p-4 w-64">
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3 flex-1">
         <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${getBadgeColor(user.badge)}`}>
           {user.username?.charAt(0)?.toUpperCase() || 'U'}
         </div>
@@ -38,6 +40,8 @@ const ProfileCard = () => {
           <div className="font-semibold truncate text-sm">{user.username}</div>
           <div className="text-xs text-gray-600">{user.school || 'CUNY'}</div>
         </div>
+        </div>
+        <NotificationBell />
       </div>
 
       <div className="text-xs text-gray-600 mb-3 space-y-1">
