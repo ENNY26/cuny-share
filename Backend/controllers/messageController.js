@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
+import Notification from '../models/Notification.js';
+import { getIO, getUserSockets } from '../utils/socket.js';
 
 
 export const sendMessage = async (req, res) => {
@@ -48,26 +50,58 @@ export const sendMessage = async (req, res) => {
     if (product) conversationQuery.product = product;
     if (note) conversationQuery.note = note;
 
-    // Ensure upsert creates a conversation with participants and context set
-    const conversationData = {
-      $set: {
+    // Find existing conversation by participants + context, update or create
+    const conversationData = { participants: { $all: [req.user._id, recipient] } };
+    if (textbook) conversationData.textbook = textbook;
+    if (product) conversationData.product = product;
+    if (note) conversationData.note = note;
+
+    const existingConv = await Conversation.findOne(conversationData);
+    if (existingConv) {
+      existingConv.lastMessage = message._id;
+      existingConv.updatedAt = new Date();
+      await existingConv.save();
+    } else {
+      const newConv = {
+        participants: [req.user._id, recipient],
         lastMessage: message._id,
         updatedAt: new Date()
-      },
-      $setOnInsert: {
-        participants: [req.user._id, recipient]
+      };
+      if (textbook) newConv.textbook = textbook;
+      if (product) newConv.product = product;
+      if (note) newConv.note = note;
+      await Conversation.create(newConv);
+    }
+
+    // Create an in-app notification for the recipient
+    try {
+      await Notification.create({
+        user: recipient,
+        type: 'message',
+        title: 'New Message',
+        message: `You have a new message from ${req.user.username || 'someone'}`,
+        relatedId: message._id,
+        relatedType: 'Message'
+      });
+
+      // Emit socket events if io is available
+      const io = getIO();
+      const userSockets = getUserSockets();
+      if (io) {
+        const recipientSocketId = userSockets.get(String(recipient));
+        if (recipientSocketId) {
+          io.to(recipientSocketId).emit('new_message', message);
+          io.to(recipientSocketId).emit('new_notification', {
+            type: 'message',
+            title: 'New Message',
+            message: `You have a new message from ${req.user.username || 'someone'}`,
+            relatedId: message._id
+          });
+        }
       }
-    };
-
-    if (textbook) conversationData.$setOnInsert.textbook = textbook;
-    if (product) conversationData.$setOnInsert.product = product;
-    if (note) conversationData.$setOnInsert.note = note;
-
-    await Conversation.findOneAndUpdate(
-      conversationQuery,
-      conversationData,
-      { upsert: true, new: true }
-    );
+    } catch (notifyErr) {
+      console.error('Failed to create/emit notification:', notifyErr);
+    }
 
     res.status(201).json(message);
   } catch (err) {

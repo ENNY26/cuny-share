@@ -15,6 +15,7 @@ import UserProfile from '../pages/UserProfile';
 
 import './App.css';
 import TextbookList from '../pages/TextbookList';
+import Messages from '../pages/Messages';
 
 
 
@@ -40,6 +41,7 @@ function App() {
         <Route path="/textbooks/upload" element={<TextbookUpload />} />
         <Route path="/swipe" element={<SwipeView />} />
         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/messages" element={user ? <Messages /> : <Navigate to="/login" />} />
         <Route path="/profile/:id" element={<UserProfile />} />
 
         {/* Catch-all redirect */}

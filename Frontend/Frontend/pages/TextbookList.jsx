@@ -18,6 +18,10 @@ const TextbookList = () => {
   const [selectedBook, setSelectedBook] = useState(null);
   const [emailContent, setEmailContent] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
+  // In-app message modal states
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageContent, setMessageContent] = useState('');
+  const [messageLoading, setMessageLoading] = useState(false);
 
   useEffect(() => {
     // Fetch user data including email
@@ -68,6 +72,12 @@ const TextbookList = () => {
     setSelectedBook(book);
     setEmailContent(`Hello, I'm interested in your textbook "${book.title}" listed on the marketplace.`);
     setShowEmailModal(true);
+  };
+
+  const openMessageModal = (book) => {
+    setSelectedBook(book);
+    setMessageContent(`Hi, I'm interested in your textbook "${book.title}". Is it still available?`);
+    setShowMessageModal(true);
   };
 
   const sendEmail = async () => {
@@ -313,14 +323,23 @@ const TextbookList = () => {
                       <Download size={16} className="mr-1" />
                       Download
                     </a>
-                    
-                    <button
-                      onClick={() => openEmailModal(book)}
-                      className="flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium"
-                    >
-                      <Mail size={16} className="mr-1" />
-                      Contact
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => openMessageModal(book)}
+                        className="flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                      >
+                        <MessageSquare size={16} className="mr-1" />
+                        Message
+                      </button>
+
+                      <button
+                        onClick={() => openEmailModal(book)}
+                        className="flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                      >
+                        <Mail size={16} className="mr-1" />
+                        Contact
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -374,6 +393,78 @@ const TextbookList = () => {
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {emailLoading ? 'Sending...' : 'Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-app Message Modal */}
+      {showMessageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="font-semibold text-gray-800">Message Seller</h3>
+              <button 
+                onClick={() => setShowMessageModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  You're messaging the seller of: <strong>{selectedBook?.title}</strong>
+                </p>
+              </div>
+
+              <textarea
+                value={messageContent}
+                onChange={(e) => setMessageContent(e.target.value)}
+                placeholder="Write your message to the seller..."
+                className="w-full h-40 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+
+            <div className="p-4 border-t flex justify-end gap-2">
+              <button
+                onClick={() => setShowMessageModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  // send in-app message via API
+                  if (!selectedBook) return;
+                  const uploaderId = selectedBook.uploader?._id || selectedBook.uploader;
+                  if (!uploaderId) {
+                    toast.error('Seller not available for messaging');
+                    return;
+                  }
+                  try {
+                    setMessageLoading(true);
+                    await axios.post('/api/messages', {
+                      recipient: uploaderId,
+                      text: messageContent,
+                      textbook: selectedBook._id
+                    });
+                    toast.success('Message sent in-app');
+                    setShowMessageModal(false);
+                    setMessageContent('');
+                  } catch (err) {
+                    console.error('Send in-app message error:', err);
+                    toast.error(err.response?.data?.message || err.message || 'Failed to send message');
+                  } finally {
+                    setMessageLoading(false);
+                  }
+                }}
+                disabled={!messageContent.trim() || messageLoading}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {messageLoading ? 'Sending...' : 'Send Message'}
               </button>
             </div>
           </div>

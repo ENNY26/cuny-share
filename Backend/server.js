@@ -19,6 +19,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import Message from './models/Message.js';
 import Conversation from './models/Conversation.js';
 import User from './models/User.js';
+import { setIO, getUserSockets } from './utils/socket.js';
 dotenv.config();
 
 const app = express();
@@ -111,8 +112,11 @@ io.use(async (socket, next) => {
   }
 });
 
+// Make io available to controllers
+setIO(io);
+
 // Socket.io connection handling
-const userSockets = new Map(); // userId -> socketId
+const userSockets = getUserSockets(); // userId -> socketId
 
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.userId}`);
@@ -145,6 +149,7 @@ io.on('connection', (socket) => {
       await message.populate('sender', 'username profilePic badge');
 
       // Update conversation
+      // Find existing conversation by participants + context, update or create
       const conversationQuery = {
         participants: { $all: [socket.userId, recipient] }
       };
@@ -152,20 +157,22 @@ io.on('connection', (socket) => {
       if (product) conversationQuery.product = product;
       if (note) conversationQuery.note = note;
 
-      const conversationData = {
-        $set: {
+      const existingConv = await Conversation.findOne(conversationQuery);
+      if (existingConv) {
+        existingConv.lastMessage = message._id;
+        existingConv.updatedAt = new Date();
+        await existingConv.save();
+      } else {
+        const newConv = {
+          participants: [socket.userId, recipient],
           lastMessage: message._id,
           updatedAt: new Date()
-        },
-        $setOnInsert: {
-          participants: [socket.userId, recipient]
-        }
-      };
-      if (textbook) conversationData.$setOnInsert.textbook = textbook;
-      if (product) conversationData.$setOnInsert.product = product;
-      if (note) conversationData.$setOnInsert.note = note;
-
-      await Conversation.findOneAndUpdate(conversationQuery, conversationData, { upsert: true, new: true });
+        };
+        if (textbook) newConv.textbook = textbook;
+        if (product) newConv.product = product;
+        if (note) newConv.note = note;
+        await Conversation.create(newConv);
+      }
 
       // Create notification for recipient
       const Notification = (await import('./models/Notification.js')).default;
