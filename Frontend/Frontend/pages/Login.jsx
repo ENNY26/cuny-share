@@ -23,7 +23,7 @@ const Login = () => {
     const success = await login(formData);
     if (success) {
       toast.success('Login successful');
-      navigate('/mainHome');
+      navigate('/main-home');
     } else {
       toast.error(error || 'Login failed');
     }

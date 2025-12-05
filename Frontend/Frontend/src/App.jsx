@@ -1,51 +1,34 @@
-// src/App.jsx
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import Home from '../pages/Home';
-import Login from '../pages/Login';
-import Signup from '../pages/Signup';
-import ForgotPassword from '../pages/ForgotPassword';
-import MainHome from '../pages/MainHome';
-import NoteList from '../pages/NoteList';
-import UploadNote from '../pages/UploadNote'; 
-import TextbookUpload from '../components/TextbookUpload';
-import SwipeView from '../pages/SwipeView';
-import ProductDetail from '../pages/ProductDetail';
-import UserProfile from '../pages/UserProfile';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-import './App.css';
-import TextbookList from '../pages/TextbookList';
-import Messages from '../pages/Messages';
-
-
-
-function App() {
-  const { user, loading } = useAuth();
-
-  if (loading) return <div>Loading...</div>;
-
+import Home from '../pages/Home.jsx';
+import MainHome from '../pages/MainHome.jsx';
+import NoteList from '../pages/NoteList.jsx';
+import ProductDetail from '../pages/ProductDetail.jsx';
+import UploadNote from '../pages/UploadNote.jsx';
+import Login from '../pages/Login.jsx';
+import SignUp from '../pages/SignUp.jsx';
+import UserProfile from '../pages/UserProfile.jsx';
+import SavedListings from '../pages/SavedListings.jsx';
+const App = () => {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/mainHome" />} />
-        <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/mainHome" />} />
-        <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/mainHome" />} />
-
-        {/* Protected routes */}
-        <Route path="/mainHome" element={user ? <MainHome /> : <Navigate to="/login" />} />
-        <Route path="/notes" element={user ? <NoteList /> : <Navigate to="/login" />} />
-        <Route path="/upload-note" element={user ? <UploadNote /> : <Navigate to="/login" />} />
-
-        <Route path="/textbooks" element={<TextbookList />} />
-        <Route path="/textbooks/upload" element={<TextbookUpload />} />
-        <Route path="/swipe" element={<SwipeView />} />
+        <Route path="main-home" element={<MainHome />} />
+        <Route path="/notes" element={<NoteList />} />
         <Route path="/product/:id" element={<ProductDetail />} />
-        <Route path="/messages" element={user ? <Messages /> : <Navigate to="/login" />} />
+        <Route path="/upload-note" element={<UploadNote />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
         <Route path="/profile/:id" element={<UserProfile />} />
+        <Route path="/saved" element={<SavedListings />} />
       </Routes>
-    </Router>
+      <ToastContainer position="top-right" autoClose={4000} />
+    </BrowserRouter>
   );
-}
+};
 
 export default App;

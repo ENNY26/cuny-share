@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import axios from '../src/api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { toast } from 'react-toastify';
 import ProfileCard from '../components/ProfileCard';
 import Badge from '../components/Badge';
+import ChatModal from '../components/ChatModal';
 import { 
   Plus, 
   Search, 
@@ -17,7 +19,8 @@ import {
   Tag,
   Clock,
   Shield,
-  TrendingUp
+  TrendingUp,
+  MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProfileIcon from '../components/ProfileIcon';
@@ -37,6 +40,13 @@ const NoteList = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [favorites, setFavorites] = useState(new Set());
   const [searchFocused, setSearchFocused] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageContent, setMessageContent] = useState('');
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  // Incoming messages for sellers: productId -> [messages]
+  const [incomingByProduct, setIncomingByProduct] = useState({});
+  const [viewIncomingFor, setViewIncomingFor] = useState(null);
 
   const observerRef = useRef();
   const searchInputRef = useRef();
@@ -133,6 +143,34 @@ const NoteList = () => {
     fetchProducts(page, selectedCategory, selectedSchool);
   }, [page]);
 
+  // Listen for incoming socket messages so sellers see interested buyers live
+  const { socket } = useSocket();
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handler = (message) => {
+      try {
+        const prodId = message.product?._id || message.product || message.relatedId;
+        if (String(message.recipient) === String(user._id) && prodId) {
+          setIncomingByProduct(prev => {
+            const key = String(prodId);
+            const arr = prev[key] ? [...prev[key]] : [];
+            arr.unshift(message);
+            return { ...prev, [key]: arr };
+          });
+          toast.info(`New inquiry on your listing: ${message.text?.slice(0, 80)}`);
+        }
+      } catch (err) {
+        console.error('incoming message handler error', err);
+      }
+    };
+
+    socket.on('new_message', handler);
+    return () => {
+      socket.off('new_message', handler);
+    };
+  }, [socket, user]);
+
   const toggleFavorite = async (id, e) => {
     e.stopPropagation();
     setFavorites(prev => {
@@ -152,6 +190,42 @@ const NoteList = () => {
     setSearchQuery(query);
     if (searchInputRef.current) {
       searchInputRef.current.focus();
+    }
+  };
+
+  const openMessageModal = (product) => {
+    setSelectedProduct(product);
+    setMessageContent(`Hi, I'm interested in your "${product.title}". Is it still available?`);
+    setShowMessageModal(true);
+  };
+
+  // Open a small modal showing incoming buyer messages for this product (seller view)
+  const openIncomingModal = (productId) => {
+    setViewIncomingFor(productId);
+  };
+
+  const sendMessage = async () => {
+    if (!messageContent.trim() || !selectedProduct) return;
+    const sellerId = selectedProduct.seller?._id || selectedProduct.seller;
+    if (!sellerId) {
+      toast.error('Seller not available for messaging');
+      return;
+    }
+    try {
+      setMessageLoading(true);
+      await axios.post('/api/messages', {
+        recipient: sellerId,
+        text: messageContent,
+        product: selectedProduct._id
+      });
+      toast.success('Message sent!');
+      setShowMessageModal(false);
+      setMessageContent('');
+    } catch (err) {
+      console.error('Send message error:', err);
+      toast.error(err.response?.data?.message || err.message || 'Failed to send message');
+    } finally {
+      setMessageLoading(false);
     }
   };
 
@@ -481,7 +555,31 @@ const NoteList = () => {
                               {product.seller.school || 'Campus Student'}
                             </p>
                           </div>
-                          <Badge badge={product.seller.badge} size="sm" />
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openMessageModal(product);
+                              }}
+                              className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-600"
+                              title="Message seller"
+                            >
+                              <MessageSquare size={16} />
+                            </button>
+                            {/* If there are incoming messages for this product (seller view), show indicator */}
+                            {incomingByProduct[String(product._id)] && incomingByProduct[String(product._id)].length > 0 && (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openIncomingModal(String(product._id)); }}
+                                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded-full hover:bg-blue-700 transition-colors"
+                                  title="View inquiries"
+                                >
+                                  {incomingByProduct[String(product._id)].length}
+                                </button>
+                              </div>
+                            )}
+                            <Badge badge={product.seller.badge} size="sm" />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -518,6 +616,70 @@ const NoteList = () => {
           )}
         </div>
       </div>
+
+      {/* Message Modal */}
+      {showMessageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="font-semibold text-gray-800">Message Seller</h3>
+              <button 
+                onClick={() => setShowMessageModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  You're messaging the seller of: <strong>{selectedProduct?.title}</strong>
+                </p>
+              </div>
+
+              <textarea
+                value={messageContent}
+                onChange={(e) => setMessageContent(e.target.value)}
+                placeholder="Write your message to the seller..."
+                className="w-full h-40 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div className="p-4 border-t flex justify-end gap-2">
+              <button
+                onClick={() => setShowMessageModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={sendMessage}
+                disabled={!messageContent.trim() || messageLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {messageLoading ? 'Sending...' : 'Send Message'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Incoming inquiries modal (seller) - reuse ChatModal */}
+      {viewIncomingFor && (
+        (() => {
+          const prod = products.find(p => String(p._id) === String(viewIncomingFor));
+          if (!prod) return null;
+          return (
+            <ChatModal
+              product={prod}
+              user={user}
+              token={token}
+              onClose={() => setViewIncomingFor(null)}
+            />
+          );
+        })()
+      )}
     </div>
   );
 };

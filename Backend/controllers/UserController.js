@@ -13,8 +13,11 @@ export const getUserProfile = async (req, res) => {
     // get user's saved products (if current user is requesting own profile)
     let saved = [];
     if (String(req.user?._id) === String(id)) {
-      // TODO: implement saved products retrieval if you track saves in User model
-      // for now, return empty
+      const me = await User.findById(id).populate({
+        path: 'savedProducts',
+        populate: { path: 'seller', select: 'username profilePic school badge' }
+      });
+      saved = me.savedProducts || [];
     }
 
     res.status(200).json({

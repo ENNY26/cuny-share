@@ -221,9 +221,27 @@ export const saveProduct = async (req, res) => {
     const product = await Product.findById(id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
     const saved = product.saves.some((s) => String(s) === String(userId));
+    // Toggle on product.saves
     if (saved) product.saves = product.saves.filter((s) => String(s) !== String(userId));
     else product.saves.push(userId);
     await product.save();
+
+    // Also keep user's savedProducts in sync
+    try {
+      const user = await User.findById(userId);
+      if (user) {
+        const already = user.savedProducts.some(p => String(p) === String(id));
+        if (already) {
+          user.savedProducts = user.savedProducts.filter(p => String(p) !== String(id));
+        } else {
+          user.savedProducts.push(id);
+        }
+        await user.save();
+      }
+    } catch (userErr) {
+      console.error('Failed to update user.savedProducts:', userErr);
+    }
+
     return res.status(200).json({ saved: !saved });
   } catch (err) {
     console.error('saveProduct error:', err);

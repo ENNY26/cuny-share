@@ -12,6 +12,7 @@ const UserProfile = () => {
 
   const [profile, setProfile] = useState(null);
   const [listings, setListings] = useState([]);
+  const [savedListings, setSavedListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ school: '', major: '', bio: '' });
@@ -25,6 +26,7 @@ const UserProfile = () => {
         });
         setProfile(res.data.user);
         setListings(res.data.listings || []);
+        setSavedListings(res.data.saved || []);
         setFormData({
           school: res.data.user.school || '',
           major: res.data.user.major || '',
@@ -178,6 +180,17 @@ const UserProfile = () => {
               ))}
             </div>
           )}
+        </div>
+        {/* Saved Listings link (navigates to /saved) */}
+        <div className="border-t px-6 py-6 mt-6">
+          <h2 className="text-xl font-bold mb-2">Saved listings</h2>
+          <p className="text-gray-600 mb-4">Manage items you've saved for later.</p>
+          <button
+            onClick={() => navigate('/saved')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            View Saved Listings ({savedListings.length})
+          </button>
         </div>
       </div>
     </div>

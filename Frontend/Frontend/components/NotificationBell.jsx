@@ -94,7 +94,8 @@ const NotificationBell = () => {
 
     // Navigate based on notification type
     if (notification.type === 'message' && notification.relatedId) {
-      navigate('/messages');
+      // Route to messages page with the conversation ID so it auto-opens
+      navigate(`/messages?conversation=${notification.relatedId}`);
     } else if (notification.type === 'listing' && notification.relatedId) {
       navigate(`/product/${notification.relatedId}`);
     } else if (notification.type === 'badge') {
