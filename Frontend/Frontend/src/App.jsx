@@ -43,9 +43,6 @@ function App() {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/messages" element={user ? <Messages /> : <Navigate to="/login" />} />
         <Route path="/profile/:id" element={<UserProfile />} />
-
-        {/* Catch-all redirect */}
-        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
   );
