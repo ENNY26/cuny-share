@@ -67,14 +67,20 @@ const Signup = () => {
     setError('');
     
     try {
-      await axios.post('/api/auth/signup', {
+      const response = await axios.post('/api/auth/signup', {
         ...formData,
         signupQuestions: skipQuestions ? {} : signupQuestions
       });
+      console.log('Signup response:', response.data);
       setMessage('OTP sent to your email!');
       setStep(3);
     } catch (err) {
-      setError(err.response?.data?.message || 'Signup failed');
+      console.error('Signup error:', err);
+      console.error('Error response:', err.response);
+      console.error('Error message:', err.message);
+      console.error('Error data:', err.response?.data);
+      const errorMessage = err.response?.data?.message || err.message || 'Signup failed';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

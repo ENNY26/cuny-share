@@ -22,14 +22,25 @@ const sendEmail = async (to, subject, text) => {
         user: process.env.SMTP_USER, 
         pass: process.env.SMTP_PWD, 
       },
+      connectionTimeout: 10000, // 10 seconds timeout for connection
+      greetingTimeout: 10000, // 10 seconds timeout for greeting
+      socketTimeout: 10000, // 10 seconds timeout for socket
     });
 
-    const result = await transporter.sendMail({
+    // Add timeout wrapper for sendMail
+    const sendMailPromise = transporter.sendMail({
       from: process.env.SENDER_EMAIL,
       to,
       subject,
       text,
     });
+
+    // Wrap with timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Email sending timeout: Request took too long')), 15000);
+    });
+
+    const result = await Promise.race([sendMailPromise, timeoutPromise]);
 
     console.log('Email sent successfully:', result.messageId);
     return result;

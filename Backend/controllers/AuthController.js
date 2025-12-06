@@ -21,6 +21,7 @@ export const signup = async (req, res) => {
 
   // Trim email
   const trimmedEmail = email.trim().toLowerCase();
+  console.log('signup called with email:', trimmedEmail);
 
   try {
     // Check if user with email already exists
@@ -34,11 +35,12 @@ export const signup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log('Generated OTP:', otpCode);
 
     // Remove any existing OTP for the email before creating new
     await OTP.deleteMany({ email: trimmedEmail, purpose: 'verify' });
 
-    await OTP.create({
+    const otpRecord = await OTP.create({
       email: trimmedEmail,
       otp: otpCode,
       password: hashedPassword,
@@ -51,11 +53,23 @@ export const signup = async (req, res) => {
       purpose: 'verify',
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min expiry
     });
+    console.log('OTP created in DB:', otpRecord._id);
 
-    await sendEmail(trimmedEmail, 'Verify your CUNY Share Account', `Your OTP code is: ${otpCode}`);
-
-    res.status(200).json({ message: 'OTP sent to email' });
+    try {
+      await sendEmail(trimmedEmail, 'Verify your CUNY Share Account', `Your OTP code is: ${otpCode}`);
+      console.log('Email sent successfully');
+      res.status(200).json({ message: 'OTP sent to email' });
+    } catch (emailError) {
+      console.error('Email sending error:', emailError);
+      // Delete the OTP we just created since email failed
+      await OTP.deleteOne({ _id: otpRecord._id });
+      return res.status(500).json({ 
+        message: 'Failed to send OTP email. Please check your email configuration.', 
+        error: emailError.message 
+      });
+    }
   } catch (err) {
+    console.error('signup error:', err);
     res.status(500).json({ message: 'Something went wrong', error: err.message });
   }
 };

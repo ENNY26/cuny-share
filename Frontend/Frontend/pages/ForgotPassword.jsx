@@ -18,11 +18,17 @@ const ForgotPassword = () => {
     setError('');
     
     try {
-      await axios.post('/api/auth/forgot-password', { email });
+      const response = await axios.post('/api/auth/forgot-password', { email });
+      console.log('Forgot password response:', response.data);
       setMessage('OTP sent to your email!');
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send OTP');
+      console.error('Forgot password error:', err);
+      console.error('Error response:', err.response);
+      console.error('Error message:', err.message);
+      console.error('Error data:', err.response?.data);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to send OTP';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -45,11 +51,19 @@ const ForgotPassword = () => {
 
   const handleResendOtp = async () => {
     setLoading(true);
+    setError('');
+    setMessage('');
     try {
-      await axios.post('/api/auth/resend-otp', { email, purpose: 'reset' });
+      const response = await axios.post('/api/auth/resend-otp', { email, purpose: 'reset' });
+      console.log('Resend OTP response:', response.data);
       setMessage('New OTP sent!');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to resend OTP');
+      console.error('Resend OTP error:', err);
+      console.error('Error response:', err.response);
+      console.error('Error message:', err.message);
+      console.error('Error data:', err.response?.data);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to resend OTP';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

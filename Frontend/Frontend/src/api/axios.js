@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'https://cuny-share-h6pj.onrender.com',
+  baseURL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000',
   withCredentials: true,
   timeout: 30000, // 30 seconds timeout
 });
