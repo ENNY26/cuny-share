@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'http://localhost:5000', // or your deployed backend URL
+  baseURL: 'https://cuny-share-h6pj.onrender.com',
   withCredentials: true,
 });
 

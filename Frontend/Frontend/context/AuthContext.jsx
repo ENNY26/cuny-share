@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const API = import.meta.env.VITE_BACKEND_URL || 'https://cuny-share-h6pj.onrender.com';
 
   // Update localStorage on auth changes
   useEffect(() => {

@@ -13,7 +13,7 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (token && user) {
-      const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const API = import.meta.env.VITE_BACKEND_URL || 'https://cuny-share-h6pj.onrender.com';
       const newSocket = io(API, {
         auth: { token },
         transports: ['websocket', 'polling'],
