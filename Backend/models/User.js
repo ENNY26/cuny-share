@@ -1,10 +1,14 @@
 import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
   username: { type: String, required: true, unique: true, trim: true },
   email: { type: String, required: true, unique: true, trim: true },
   password: { type: String, required: true },
   school: { type: String, default: 'CUNY' }, // e.g., 'CCNY', 'Hunter', 'Baruch'
+  level: { type: String, default: '' }, // e.g., 'Freshman', 'Sophomore', 'Junior', 'Senior'
+  isAlumni: { type: Boolean, default: false },
+  isVerified: { type: Boolean, default: false },
   major: { type: String, default: '' }, // e.g., 'Computer Science'
   profilePic: { type: String, default: null }, // URL
   badge: { type: String, enum: ['bronze', 'silver', 'gold', 'platinum', 'none'], default: 'none' },

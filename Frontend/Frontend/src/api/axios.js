@@ -3,6 +3,7 @@ import axios from 'axios';
 const instance = axios.create({
   baseURL: 'https://cuny-share-h6pj.onrender.com',
   withCredentials: true,
+  timeout: 30000, // 30 seconds timeout
 });
 
 // Request interceptor to add auth token if available

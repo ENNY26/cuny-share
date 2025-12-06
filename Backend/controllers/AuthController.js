@@ -10,35 +10,49 @@ import sendEmail from '../utils/sendEmail.js';
 export const signup = async (req, res) => {
   const { name, username, school, level, isAlumni, email, password, signupQuestions } = req.body;
 
+  // Validate required fields
+  if (!name || !username || !email || !password) {
+    return res.status(400).json({ message: 'All required fields must be provided' });
+  }
+
   if (!password || password.length < 6) {
     return res.status(400).json({ message: 'Password must be at least 6 characters long' });
   }
 
+  // Trim email
+  const trimmedEmail = email.trim().toLowerCase();
+
   try {
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ message: 'User already exists' });
+    // Check if user with email already exists
+    const existingEmail = await User.findOne({ email: trimmedEmail });
+    if (existingEmail) return res.status(400).json({ message: 'User with this email already exists' });
+
+    // Check if username is already taken
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) return res.status(400).json({ message: 'Username already taken' });
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Remove any existing OTP for the email before creating new
-    await OTP.findOneAndDelete({ email });
+    await OTP.deleteMany({ email: trimmedEmail, purpose: 'verify' });
 
     await OTP.create({
-      email,
+      email: trimmedEmail,
       otp: otpCode,
       password: hashedPassword,
-      name,
-      username,
-      school,
-      level,
-      isAlumni,
+      name: name.trim(),
+      username: username.trim(),
+      school: school?.trim() || '',
+      level: level?.trim() || '',
+      isAlumni: isAlumni || false,
       signupQuestions: signupQuestions || {},
+      purpose: 'verify',
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min expiry
     });
 
-    await sendEmail(email, 'Verify your CUNY Share Account', `Your OTP code is: ${otpCode}`);
+    await sendEmail(trimmedEmail, 'Verify your CUNY Share Account', `Your OTP code is: ${otpCode}`);
 
     res.status(200).json({ message: 'OTP sent to email' });
   } catch (err) {
@@ -53,21 +67,41 @@ export const signup = async (req, res) => {
 export const verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
 
+  if (!email || !otp) {
+    return res.status(400).json({ message: 'Email and OTP are required' });
+  }
+
+  const trimmedEmail = email.trim().toLowerCase();
+  const trimmedOtp = otp.trim();
+
   try {
-    // ✅ Get the most recent OTP for this email
-    const existing = await OTP.findOne({ email }).sort({ createdAt: -1 });
+    // ✅ Get the most recent OTP for this email with purpose 'verify'
+    const existing = await OTP.findOne({ email: trimmedEmail, purpose: 'verify' }).sort({ createdAt: -1 });
     if (!existing) return res.status(400).json({ message: 'OTP not found. Please request a new one.' });
 
     console.log('Stored OTP:', existing.otp);
-    console.log('Received OTP:', otp);
+    console.log('Received OTP:', trimmedOtp);
 
     // Trim and compare
-    if (existing.otp.trim() !== otp.trim()) {
+    if (String(existing.otp).trim() !== trimmedOtp) {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
 
     if (existing.expiresAt < new Date()) {
       return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    }
+
+    // Check if user already exists (might have been created between signup and verification)
+    const existingUser = await User.findOne({ email: trimmedEmail });
+    if (existingUser) {
+      await OTP.deleteMany({ email: trimmedEmail, purpose: 'verify' });
+      return res.status(400).json({ message: 'User already exists. Please login instead.' });
+    }
+
+    // Check if username is taken
+    const existingUsername = await User.findOne({ username: existing.username });
+    if (existingUsername) {
+      return res.status(400).json({ message: 'Username already taken. Please signup again with a different username.' });
     }
 
     // ✅ Create new user using OTP-stored data
@@ -86,12 +120,17 @@ export const verifyOtp = async (req, res) => {
     await newUser.save();
 
     // ✅ Delete all OTPs for this email
-    await OTP.deleteMany({ email });
+    await OTP.deleteMany({ email: trimmedEmail, purpose: 'verify' });
 
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({ message: 'Account verified and created', token, user: newUser });
   } catch (err) {
+    // Handle duplicate key errors
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      return res.status(400).json({ message: `${field} already exists. Please try again.` });
+    }
     res.status(500).json({ message: 'Verification failed', error: err.message });
   }
 };
@@ -101,11 +140,18 @@ export const verifyOtp = async (req, res) => {
 export const login = async (req, res) => {
     const {email, password} = req.body;
 
+    if (!email || !password) {
+        return res.status(400).json({message: "Email and password are required"});
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+
     try {
-        const user = await User.findOne({ email: email.trim() });
+        const user = await User.findOne({ email: trimmedEmail });
         if(!user) return res.status(400).json({message: "User not found"});
 
-        const isMatch = await bcrypt.compare(password.trim(), user.password);
+        const isMatch = await bcrypt.compare(trimmedPassword, user.password);
         if(!isMatch) {
             console.log(`Password mismatch for user ${email}`);
             return res.status(400).json({message: "Invalid credentials"});
@@ -130,28 +176,44 @@ export const login = async (req, res) => {
 //FORGOT PWD
 
 export const forgotPassword = async (req, res) => {
+  const { email } = req.body;
 
-  const {email} = req.body;
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
+
+  const trimmedEmail = email.trim().toLowerCase();
+  console.log('forgotPassword called with email:', trimmedEmail);
 
   try {
-    const user = await User.findOne({email});
-    if(!user) return res.staqtus(404).json ({message: "User not found"});
+    const user = await User.findOne({ email: trimmedEmail });
+    console.log('User found:', user ? 'Yes' : 'No');
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log('Generated OTP:', otpCode);
 
-    await OTP.findOneAndDelete({email, purpose: 'reset'}); // Remove any existing OTP for this email
-    await OTP.create({
-      email,
+    await OTP.deleteMany({ email: trimmedEmail, purpose: 'reset' }); // Remove any existing OTP for this email
+    const otpRecord = await OTP.create({
+      email: trimmedEmail,
       otp: otpCode,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min expiry
       purpose: 'reset',
     });
+    console.log('OTP created in DB:', otpRecord._id);
 
-    await sendEmail(email, 'Reset your CUNY Share Password', `Your OTP code is: ${otpCode}`);
+    try {
+      await sendEmail(trimmedEmail, 'Reset your CUNY Share Password', `Your OTP code is: ${otpCode}`);
+      console.log('Email sent successfully');
+    } catch (emailError) {
+      console.error('Email sending error:', emailError);
+      return res.status(500).json({message: 'Failed to send OTP email', error: emailError.message});
+    }
 
     res.status(200).json({message: 'OTP sent to email'});
 
   } catch (error) {
+    console.error('forgotPassword error:', error);
     res.status(500).json({message: 'server error', error: error.message});
   }
 }
@@ -163,11 +225,14 @@ export const verifyResetOtp = async (req, res) => {
     return res.status(400).json({ message: 'Email and OTP are required' });
   }
 
+  const trimmedEmail = email.trim().toLowerCase();
+  const trimmedOtp = otp.trim();
+
   try {
-    const existing = await OTP.findOne({ email, purpose: 'reset' }).sort({ createdAt: -1 });
+    const existing = await OTP.findOne({ email: trimmedEmail, purpose: 'reset' }).sort({ createdAt: -1 });
     if (!existing) return res.status(400).json({ message: 'OTP not found. Please request a new one.' });
 
-    if (String(existing.otp).trim() !== String(otp).trim()) {
+    if (String(existing.otp).trim() !== trimmedOtp) {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
 
@@ -186,22 +251,35 @@ export const verifyResetOtp = async (req, res) => {
 export const resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
 
-  if (!newPassword || newPassword.length < 6) {
+  if (!email || !otp || !newPassword) {
+    return res.status(400).json({ message: 'Email, OTP, and new password are required' });
+  }
+
+  if (newPassword.length < 6) {
     return res.status(400).json({ message: 'Password must be at least 6 characters long' });
   }
 
+  const trimmedEmail = email.trim().toLowerCase();
+  const trimmedOtp = otp.trim();
+
   try {
-    const otpRecord = await OTP.findOne({ email, purpose: 'reset' });
+    const otpRecord = await OTP.findOne({ email: trimmedEmail, purpose: 'reset' }).sort({ createdAt: -1 });
     if (!otpRecord) return res.status(400).json({ message: 'OTP not found or expired' });
-    if (otpRecord.otp !== otp) return res.status(400).json({ message: 'Invalid OTP' });
+    if (String(otpRecord.otp).trim() !== trimmedOtp) return res.status(400).json({ message: 'Invalid OTP' });
     if (otpRecord.expiresAt < new Date()) return res.status(400).json({ message: 'OTP expired' });
 
-   const hashedPassword = await bcrypt.hash(newPassword, 12);
-    await User.findOneAndUpdate(
-      { email },
-      { password: hashedPassword, isVerified: true } // <-- Mark user as verified
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const updatedUser = await User.findOneAndUpdate(
+      { email: trimmedEmail },
+      { password: hashedPassword, isVerified: true }, // <-- Mark user as verified
+      { new: true }
     );
-    await OTP.deleteOne({ _id: otpRecord._id });
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    await OTP.deleteMany({ email: trimmedEmail, purpose: 'reset' });
 
     res.status(200).json({ message: 'Password reset successfully' });
   } catch (err) {
@@ -213,21 +291,71 @@ export const resetPassword = async (req, res) => {
 export const resendOtp = async (req, res) => {
   const { email, purpose = 'verify' } = req.body;
 
+  console.log('resendOtp called with:', { email, purpose });
+
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
+
+  const trimmedEmail = email.trim().toLowerCase();
+
   try {
+    // Find existing OTP to preserve signup data if it's a verify purpose
+    const existingOtp = await OTP.findOne({ email: trimmedEmail, purpose }).sort({ createdAt: -1 });
+    console.log('Existing OTP found:', existingOtp ? 'Yes' : 'No');
+    
+    // If it's verify purpose and no existing OTP, user needs to signup again
+    if (purpose === 'verify' && !existingOtp) {
+      return res.status(400).json({ message: 'No signup found for this email. Please signup again.' });
+    }
+    
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log('Generated new OTP:', otpCode);
 
-    await OTP.findOneAndDelete({ email, purpose });
+    // Delete old OTP
+    await OTP.deleteMany({ email: trimmedEmail, purpose });
 
-    await OTP.create({
-      email,
+    // Create new OTP, preserving signup data if it exists
+    const newOtpData = {
+      email: trimmedEmail,
       otp: otpCode,
       purpose,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-    });
+    };
 
-    await sendEmail(email, `Your OTP for ${purpose}`, `Your OTP code is: ${otpCode}`);
-    res.status(200).json({ message: 'New OTP sent to email' });
+    // If resending for signup verification, preserve the signup data
+    if (purpose === 'verify' && existingOtp) {
+      newOtpData.password = existingOtp.password;
+      newOtpData.name = existingOtp.name;
+      newOtpData.username = existingOtp.username;
+      newOtpData.school = existingOtp.school;
+      newOtpData.level = existingOtp.level;
+      newOtpData.isAlumni = existingOtp.isAlumni;
+      newOtpData.signupQuestions = existingOtp.signupQuestions || {};
+    }
+
+    const createdOtp = await OTP.create(newOtpData);
+    console.log('New OTP created in DB:', createdOtp._id);
+
+    const emailSubject = purpose === 'reset' 
+      ? 'Reset your CUNY Share Password' 
+      : 'Verify your CUNY Share Account';
+    
+    try {
+      await sendEmail(trimmedEmail, emailSubject, `Your OTP code is: ${otpCode}`);
+      console.log('Email sent successfully for resend OTP');
+      res.status(200).json({ message: 'New OTP sent to email' });
+    } catch (emailError) {
+      console.error('Email sending failed in resendOtp:', emailError);
+      // Delete the OTP we just created since email failed
+      await OTP.deleteOne({ _id: createdOtp._id });
+      return res.status(500).json({ 
+        message: 'Failed to send OTP email. Please check your email configuration.', 
+        error: emailError.message 
+      });
+    }
   } catch (error) {
+    console.error('resendOtp error:', error);
     res.status(500).json({ message: 'Failed to resend OTP', error: error.message });
   }
 };
