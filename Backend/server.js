@@ -31,8 +31,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://cuny-share.vercel.app',
-  process.env.FRONTEND_URL // optional, for prod
-];
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
+].filter(Boolean); // Remove any undefined values
 
 
 app.use(cors({
