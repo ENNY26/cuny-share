@@ -18,7 +18,10 @@ const ForgotPassword = () => {
     setError('');
     
     try {
-      const response = await axios.post('/api/auth/forgot-password', { email });
+      // Use a longer timeout for forgot password request (60 seconds)
+      const response = await axios.post('/api/auth/forgot-password', { email }, {
+        timeout: 60000 // 60 seconds timeout
+      });
       console.log('Forgot password response:', response.data);
       setMessage('OTP sent to your email!');
       setStep(2);
@@ -54,7 +57,10 @@ const ForgotPassword = () => {
     setError('');
     setMessage('');
     try {
-      const response = await axios.post('/api/auth/resend-otp', { email, purpose: 'reset' });
+      // Use a longer timeout for resend OTP request (60 seconds)
+      const response = await axios.post('/api/auth/resend-otp', { email, purpose: 'reset' }, {
+        timeout: 60000 // 60 seconds timeout
+      });
       console.log('Resend OTP response:', response.data);
       setMessage('New OTP sent!');
     } catch (err) {

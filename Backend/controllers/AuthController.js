@@ -55,19 +55,20 @@ export const signup = async (req, res) => {
     });
     console.log('OTP created in DB:', otpRecord._id);
 
-    try {
-      await sendEmail(trimmedEmail, 'Verify your CUNY Share Account', `Your OTP code is: ${otpCode}`);
-      console.log('Email sent successfully');
-      res.status(200).json({ message: 'OTP sent to email' });
-    } catch (emailError) {
-      console.error('Email sending error:', emailError);
-      // Delete the OTP we just created since email failed
-      await OTP.deleteOne({ _id: otpRecord._id });
-      return res.status(500).json({ 
-        message: 'Failed to send OTP email. Please check your email configuration.', 
-        error: emailError.message 
+    // Send email asynchronously (non-blocking) to prevent timeout issues
+    // Respond immediately to the client
+    sendEmail(trimmedEmail, 'Verify your CUNY Share Account', `Your OTP code is: ${otpCode}`)
+      .then(() => {
+        console.log('Email sent successfully');
+      })
+      .catch((emailError) => {
+        console.error('Email sending error (non-blocking):', emailError);
+        // Email sending failed, but OTP is already created
+        // User can request a new OTP if needed
       });
-    }
+
+    // Respond immediately without waiting for email
+    res.status(200).json({ message: 'OTP sent to email' });
   } catch (err) {
     console.error('signup error:', err);
     res.status(500).json({ message: 'Something went wrong', error: err.message });
@@ -216,14 +217,19 @@ export const forgotPassword = async (req, res) => {
     });
     console.log('OTP created in DB:', otpRecord._id);
 
-    try {
-      await sendEmail(trimmedEmail, 'Reset your CUNY Share Password', `Your OTP code is: ${otpCode}`);
-      console.log('Email sent successfully');
-    } catch (emailError) {
-      console.error('Email sending error:', emailError);
-      return res.status(500).json({message: 'Failed to send OTP email', error: emailError.message});
-    }
+    // Send email asynchronously (non-blocking) to prevent timeout issues
+    // Respond immediately to the client
+    sendEmail(trimmedEmail, 'Reset your CUNY Share Password', `Your OTP code is: ${otpCode}`)
+      .then(() => {
+        console.log('Email sent successfully');
+      })
+      .catch((emailError) => {
+        console.error('Email sending error (non-blocking):', emailError);
+        // Email sending failed, but OTP is already created
+        // User can request a new OTP if needed
+      });
 
+    // Respond immediately without waiting for email
     res.status(200).json({message: 'OTP sent to email'});
 
   } catch (error) {
@@ -355,19 +361,20 @@ export const resendOtp = async (req, res) => {
       ? 'Reset your CUNY Share Password' 
       : 'Verify your CUNY Share Account';
     
-    try {
-      await sendEmail(trimmedEmail, emailSubject, `Your OTP code is: ${otpCode}`);
-      console.log('Email sent successfully for resend OTP');
-      res.status(200).json({ message: 'New OTP sent to email' });
-    } catch (emailError) {
-      console.error('Email sending failed in resendOtp:', emailError);
-      // Delete the OTP we just created since email failed
-      await OTP.deleteOne({ _id: createdOtp._id });
-      return res.status(500).json({ 
-        message: 'Failed to send OTP email. Please check your email configuration.', 
-        error: emailError.message 
+    // Send email asynchronously (non-blocking) to prevent timeout issues
+    // Respond immediately to the client
+    sendEmail(trimmedEmail, emailSubject, `Your OTP code is: ${otpCode}`)
+      .then(() => {
+        console.log('Email sent successfully for resend OTP');
+      })
+      .catch((emailError) => {
+        console.error('Email sending error (non-blocking):', emailError);
+        // Email sending failed, but OTP is already created
+        // User can request a new OTP if needed
       });
-    }
+
+    // Respond immediately without waiting for email
+    res.status(200).json({ message: 'New OTP sent to email' });
   } catch (error) {
     console.error('resendOtp error:', error);
     res.status(500).json({ message: 'Failed to resend OTP', error: error.message });
