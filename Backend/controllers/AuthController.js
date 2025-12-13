@@ -55,14 +55,31 @@ export const signup = async (req, res) => {
     });
     console.log('OTP created in DB:', otpRecord._id);
 
+    // Check email configuration before attempting to send
+    if (!process.env.SMTP_USER || !process.env.SMTP_PWD || !process.env.SENDER_EMAIL) {
+      console.error('❌ EMAIL CONFIGURATION MISSING IN PRODUCTION!');
+      console.error('Missing variables:', {
+        SMTP_USER: !process.env.SMTP_USER,
+        SMTP_PWD: !process.env.SMTP_PWD,
+        SENDER_EMAIL: !process.env.SENDER_EMAIL,
+        NODE_ENV: process.env.NODE_ENV
+      });
+    }
+
     // Send email asynchronously (non-blocking) to prevent timeout issues
     // Respond immediately to the client
     sendEmail(trimmedEmail, 'Verify your CUNY Share Account', `Your OTP code is: ${otpCode}`)
-      .then(() => {
-        console.log('Email sent successfully');
+      .then((result) => {
+        console.log('✅ Email sent successfully to:', trimmedEmail);
+        console.log('Message ID:', result?.messageId);
       })
       .catch((emailError) => {
-        console.error('Email sending error (non-blocking):', emailError);
+        console.error('❌ EMAIL SENDING FAILED (non-blocking):');
+        console.error('To:', trimmedEmail);
+        console.error('Error:', emailError.message);
+        console.error('Error code:', emailError.code);
+        console.error('Full error:', emailError);
+        console.error('⚠️ OTP was created but email was not sent. User can request a new OTP.');
         // Email sending failed, but OTP is already created
         // User can request a new OTP if needed
       });
@@ -217,14 +234,31 @@ export const forgotPassword = async (req, res) => {
     });
     console.log('OTP created in DB:', otpRecord._id);
 
+    // Check email configuration before attempting to send
+    if (!process.env.SMTP_USER || !process.env.SMTP_PWD || !process.env.SENDER_EMAIL) {
+      console.error('❌ EMAIL CONFIGURATION MISSING IN PRODUCTION!');
+      console.error('Missing variables:', {
+        SMTP_USER: !process.env.SMTP_USER,
+        SMTP_PWD: !process.env.SMTP_PWD,
+        SENDER_EMAIL: !process.env.SENDER_EMAIL,
+        NODE_ENV: process.env.NODE_ENV
+      });
+    }
+
     // Send email asynchronously (non-blocking) to prevent timeout issues
     // Respond immediately to the client
     sendEmail(trimmedEmail, 'Reset your CUNY Share Password', `Your OTP code is: ${otpCode}`)
-      .then(() => {
-        console.log('Email sent successfully');
+      .then((result) => {
+        console.log('✅ Email sent successfully to:', trimmedEmail);
+        console.log('Message ID:', result?.messageId);
       })
       .catch((emailError) => {
-        console.error('Email sending error (non-blocking):', emailError);
+        console.error('❌ EMAIL SENDING FAILED (non-blocking):');
+        console.error('To:', trimmedEmail);
+        console.error('Error:', emailError.message);
+        console.error('Error code:', emailError.code);
+        console.error('Full error:', emailError);
+        console.error('⚠️ OTP was created but email was not sent. User can request a new OTP.');
         // Email sending failed, but OTP is already created
         // User can request a new OTP if needed
       });
@@ -361,14 +395,31 @@ export const resendOtp = async (req, res) => {
       ? 'Reset your CUNY Share Password' 
       : 'Verify your CUNY Share Account';
     
+    // Check email configuration before attempting to send
+    if (!process.env.SMTP_USER || !process.env.SMTP_PWD || !process.env.SENDER_EMAIL) {
+      console.error('❌ EMAIL CONFIGURATION MISSING IN PRODUCTION!');
+      console.error('Missing variables:', {
+        SMTP_USER: !process.env.SMTP_USER,
+        SMTP_PWD: !process.env.SMTP_PWD,
+        SENDER_EMAIL: !process.env.SENDER_EMAIL,
+        NODE_ENV: process.env.NODE_ENV
+      });
+    }
+
     // Send email asynchronously (non-blocking) to prevent timeout issues
     // Respond immediately to the client
     sendEmail(trimmedEmail, emailSubject, `Your OTP code is: ${otpCode}`)
-      .then(() => {
-        console.log('Email sent successfully for resend OTP');
+      .then((result) => {
+        console.log('✅ Email sent successfully for resend OTP to:', trimmedEmail);
+        console.log('Message ID:', result?.messageId);
       })
       .catch((emailError) => {
-        console.error('Email sending error (non-blocking):', emailError);
+        console.error('❌ EMAIL SENDING FAILED (non-blocking):');
+        console.error('To:', trimmedEmail);
+        console.error('Error:', emailError.message);
+        console.error('Error code:', emailError.code);
+        console.error('Full error:', emailError);
+        console.error('⚠️ OTP was created but email was not sent. User can request a new OTP.');
         // Email sending failed, but OTP is already created
         // User can request a new OTP if needed
       });

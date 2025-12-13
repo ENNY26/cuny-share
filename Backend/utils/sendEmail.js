@@ -10,15 +10,23 @@ const sendEmail = async (to, subject, text, retries = 2) => {
   const sendTimeout = isProduction ? 45000 : 15000; // 45s for prod, 15s for dev
 
   try {
-    console.log('Sending email to:', to);
+    console.log('📧 Attempting to send email to:', to);
     console.log('Environment:', isProduction ? 'production' : 'development');
+    console.log('Email config check:', {
+      hasSMTP_USER: !!process.env.SMTP_USER,
+      hasSMTP_PWD: !!process.env.SMTP_PWD,
+      hasSENDER_EMAIL: !!process.env.SENDER_EMAIL,
+      SMTP_USER: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}...` : 'NOT SET',
+      SENDER_EMAIL: process.env.SENDER_EMAIL || 'NOT SET'
+    });
     
     // Check if email configuration is set
     if (!process.env.SMTP_USER || !process.env.SMTP_PWD || !process.env.SENDER_EMAIL) {
-      console.error('Email configuration missing:', {
+      console.error('❌ Email configuration missing:', {
         hasSMTP_USER: !!process.env.SMTP_USER,
         hasSMTP_PWD: !!process.env.SMTP_PWD,
-        hasSENDER_EMAIL: !!process.env.SENDER_EMAIL
+        hasSENDER_EMAIL: !!process.env.SENDER_EMAIL,
+        NODE_ENV: process.env.NODE_ENV
       });
       throw new Error('Email service is not configured. Please set SMTP_USER, SMTP_PWD, and SENDER_EMAIL environment variables.');
     }
@@ -45,10 +53,12 @@ const sendEmail = async (to, subject, text, retries = 2) => {
 
       // Verify connection first
       try {
+        console.log(`🔌 Verifying SMTP connection on port ${port}...`);
         await transporter.verify();
-        console.log('SMTP connection verified successfully');
+        console.log('✅ SMTP connection verified successfully');
       } catch (verifyError) {
-        console.error('SMTP verification failed:', verifyError.message);
+        console.error('❌ SMTP verification failed:', verifyError.message);
+        console.error('Error code:', verifyError.code);
         throw new Error(`SMTP connection verification failed: ${verifyError.message}`);
       }
 
@@ -89,12 +99,17 @@ const sendEmail = async (to, subject, text, retries = 2) => {
       }
     }
 
-    console.log('Email sent successfully:', result.messageId);
+    console.log('✅ Email sent successfully!');
+    console.log('Message ID:', result.messageId);
+    console.log('To:', to);
     return result;
   } catch (error) {
-    console.error('Email sending failed:', error.message);
+    console.error('❌ Email sending failed!');
+    console.error('To:', to);
+    console.error('Error message:', error.message);
     console.error('Error code:', error.code);
-    console.error('Full error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     
     // Provide more helpful error messages
     if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {

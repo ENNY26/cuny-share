@@ -75,6 +75,21 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK' });
 });
 
+// Email configuration diagnostic endpoint (for debugging)
+app.get('/api/email-config', (req, res) => {
+  const config = {
+    hasSMTP_USER: !!process.env.SMTP_USER,
+    hasSMTP_PWD: !!process.env.SMTP_PWD,
+    hasSENDER_EMAIL: !!process.env.SENDER_EMAIL,
+    SMTP_USER_preview: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}...` : 'NOT SET',
+    SENDER_EMAIL: process.env.SENDER_EMAIL || 'NOT SET',
+    NODE_ENV: process.env.NODE_ENV || 'NOT SET',
+    isConfigured: !!(process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL)
+  };
+  
+  res.status(200).json(config);
+});
+
 
 
 // Socket.io setup
