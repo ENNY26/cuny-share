@@ -72,6 +72,7 @@ export const signup = async (req, res) => {
       .then((result) => {
         console.log('✅ Email sent successfully to:', trimmedEmail);
         console.log('Message ID:', result?.messageId);
+        console.log('OTP Code:', otpCode); // Log OTP for debugging (remove in production if security concern)
       })
       .catch((emailError) => {
         console.error('❌ EMAIL SENDING FAILED (non-blocking):');
@@ -80,12 +81,19 @@ export const signup = async (req, res) => {
         console.error('Error code:', emailError.code);
         console.error('Full error:', emailError);
         console.error('⚠️ OTP was created but email was not sent. User can request a new OTP.');
+        console.error('OTP Code (for debugging):', otpCode); // Log OTP for debugging
         // Email sending failed, but OTP is already created
         // User can request a new OTP if needed
       });
 
     // Respond immediately without waiting for email
-    res.status(200).json({ message: 'OTP sent to email' });
+    // In production, you might want to check if email config exists before saying "sent"
+    const hasEmailConfig = process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL;
+    res.status(200).json({ 
+      message: hasEmailConfig ? 'OTP sent to email' : 'OTP generated. Please check your email configuration.',
+      // Include OTP in response for development/testing (remove in production)
+      ...(process.env.NODE_ENV !== 'production' && { debugOtp: otpCode })
+    });
   } catch (err) {
     console.error('signup error:', err);
     res.status(500).json({ message: 'Something went wrong', error: err.message });
@@ -109,18 +117,33 @@ export const verifyOtp = async (req, res) => {
   try {
     // ✅ Get the most recent OTP for this email with purpose 'verify'
     const existing = await OTP.findOne({ email: trimmedEmail, purpose: 'verify' }).sort({ createdAt: -1 });
-    if (!existing) return res.status(400).json({ message: 'OTP not found. Please request a new one.' });
+    if (!existing) {
+      console.error('OTP not found for email:', trimmedEmail);
+      return res.status(400).json({ message: 'OTP not found. Please request a new one.' });
+    }
 
     console.log('Stored OTP:', existing.otp);
     console.log('Received OTP:', trimmedOtp);
+    console.log('OTP expires at:', existing.expiresAt);
+    console.log('Current time:', new Date());
+    console.log('OTP is expired?', existing.expiresAt < new Date());
 
-    // Trim and compare
-    if (String(existing.otp).trim() !== trimmedOtp) {
-      return res.status(400).json({ message: 'Invalid OTP' });
+    // Check expiration first (more user-friendly)
+    const now = new Date();
+    if (existing.expiresAt < now) {
+      console.error('OTP expired. Expires at:', existing.expiresAt, 'Current:', now);
+      // Clean up expired OTP
+      await OTP.deleteOne({ _id: existing._id });
+      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
     }
 
-    if (existing.expiresAt < new Date()) {
-      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    // Trim and compare (case-insensitive for better UX)
+    const storedOtp = String(existing.otp).trim();
+    const receivedOtp = trimmedOtp.trim();
+    
+    if (storedOtp !== receivedOtp) {
+      console.error('OTP mismatch. Stored:', storedOtp, 'Received:', receivedOtp);
+      return res.status(400).json({ message: 'Invalid OTP. Please check and try again.' });
     }
 
     // Check if user already exists (might have been created between signup and verification)
@@ -251,6 +274,7 @@ export const forgotPassword = async (req, res) => {
       .then((result) => {
         console.log('✅ Email sent successfully to:', trimmedEmail);
         console.log('Message ID:', result?.messageId);
+        console.log('OTP Code:', otpCode); // Log OTP for debugging
       })
       .catch((emailError) => {
         console.error('❌ EMAIL SENDING FAILED (non-blocking):');
@@ -259,12 +283,18 @@ export const forgotPassword = async (req, res) => {
         console.error('Error code:', emailError.code);
         console.error('Full error:', emailError);
         console.error('⚠️ OTP was created but email was not sent. User can request a new OTP.');
+        console.error('OTP Code (for debugging):', otpCode); // Log OTP for debugging
         // Email sending failed, but OTP is already created
         // User can request a new OTP if needed
       });
 
     // Respond immediately without waiting for email
-    res.status(200).json({message: 'OTP sent to email'});
+    const hasEmailConfig = process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL;
+    res.status(200).json({
+      message: hasEmailConfig ? 'OTP sent to email' : 'OTP generated. Please check your email configuration.',
+      // Include OTP in response for development/testing (remove in production)
+      ...(process.env.NODE_ENV !== 'production' && { debugOtp: otpCode })
+    });
 
   } catch (error) {
     console.error('forgotPassword error:', error);
@@ -284,14 +314,31 @@ export const verifyResetOtp = async (req, res) => {
 
   try {
     const existing = await OTP.findOne({ email: trimmedEmail, purpose: 'reset' }).sort({ createdAt: -1 });
-    if (!existing) return res.status(400).json({ message: 'OTP not found. Please request a new one.' });
-
-    if (String(existing.otp).trim() !== trimmedOtp) {
-      return res.status(400).json({ message: 'Invalid OTP' });
+    if (!existing) {
+      console.error('Reset OTP not found for email:', trimmedEmail);
+      return res.status(400).json({ message: 'OTP not found. Please request a new one.' });
     }
 
-    if (existing.expiresAt < new Date()) {
+    console.log('Stored Reset OTP:', existing.otp);
+    console.log('Received OTP:', trimmedOtp);
+    console.log('OTP expires at:', existing.expiresAt);
+    console.log('Current time:', new Date());
+
+    // Check expiration first
+    const now = new Date();
+    if (existing.expiresAt < now) {
+      console.error('Reset OTP expired. Expires at:', existing.expiresAt, 'Current:', now);
+      await OTP.deleteOne({ _id: existing._id });
       return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    }
+
+    // Trim and compare
+    const storedOtp = String(existing.otp).trim();
+    const receivedOtp = trimmedOtp.trim();
+    
+    if (storedOtp !== receivedOtp) {
+      console.error('Reset OTP mismatch. Stored:', storedOtp, 'Received:', receivedOtp);
+      return res.status(400).json({ message: 'Invalid OTP. Please check and try again.' });
     }
 
     return res.status(200).json({ message: 'OTP verified' });
@@ -318,9 +365,29 @@ export const resetPassword = async (req, res) => {
 
   try {
     const otpRecord = await OTP.findOne({ email: trimmedEmail, purpose: 'reset' }).sort({ createdAt: -1 });
-    if (!otpRecord) return res.status(400).json({ message: 'OTP not found or expired' });
-    if (String(otpRecord.otp).trim() !== trimmedOtp) return res.status(400).json({ message: 'Invalid OTP' });
-    if (otpRecord.expiresAt < new Date()) return res.status(400).json({ message: 'OTP expired' });
+    if (!otpRecord) {
+      console.error('Reset password OTP not found for email:', trimmedEmail);
+      return res.status(400).json({ message: 'OTP not found or expired' });
+    }
+
+    console.log('Reset password - Stored OTP:', otpRecord.otp);
+    console.log('Reset password - Received OTP:', trimmedOtp);
+
+    // Check expiration first
+    const now = new Date();
+    if (otpRecord.expiresAt < now) {
+      console.error('Reset password OTP expired');
+      await OTP.deleteOne({ _id: otpRecord._id });
+      return res.status(400).json({ message: 'OTP expired' });
+    }
+
+    // Trim and compare
+    const storedOtp = String(otpRecord.otp).trim();
+    const receivedOtp = trimmedOtp.trim();
+    if (storedOtp !== receivedOtp) {
+      console.error('Reset password OTP mismatch');
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     const updatedUser = await User.findOneAndUpdate(
@@ -412,6 +479,7 @@ export const resendOtp = async (req, res) => {
       .then((result) => {
         console.log('✅ Email sent successfully for resend OTP to:', trimmedEmail);
         console.log('Message ID:', result?.messageId);
+        console.log('OTP Code:', otpCode); // Log OTP for debugging
       })
       .catch((emailError) => {
         console.error('❌ EMAIL SENDING FAILED (non-blocking):');
@@ -420,12 +488,18 @@ export const resendOtp = async (req, res) => {
         console.error('Error code:', emailError.code);
         console.error('Full error:', emailError);
         console.error('⚠️ OTP was created but email was not sent. User can request a new OTP.');
+        console.error('OTP Code (for debugging):', otpCode); // Log OTP for debugging
         // Email sending failed, but OTP is already created
         // User can request a new OTP if needed
       });
 
     // Respond immediately without waiting for email
-    res.status(200).json({ message: 'New OTP sent to email' });
+    const hasEmailConfig = process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL;
+    res.status(200).json({ 
+      message: hasEmailConfig ? 'New OTP sent to email' : 'New OTP generated. Please check your email configuration.',
+      // Include OTP in response for development/testing (remove in production)
+      ...(process.env.NODE_ENV !== 'production' && { debugOtp: otpCode })
+    });
   } catch (error) {
     console.error('resendOtp error:', error);
     res.status(500).json({ message: 'Failed to resend OTP', error: error.message });
