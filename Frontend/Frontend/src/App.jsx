@@ -13,6 +13,7 @@ import SignUp from '../pages/SignUp.jsx';
 import ForgotPassword from '../pages/ForgotPassword.jsx';
 import UserProfile from '../pages/UserProfile.jsx';
 import SavedListings from '../pages/SavedListings.jsx';
+import Messages from '../pages/Messages.jsx';
 const App = () => {
   return (
     <BrowserRouter>
@@ -27,6 +28,7 @@ const App = () => {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/profile/:id" element={<UserProfile />} />
         <Route path="/saved" element={<SavedListings />} />
+        <Route path="/messages" element={<Messages />} />
       </Routes>
       <ToastContainer position="top-right" autoClose={4000} />
     </BrowserRouter>

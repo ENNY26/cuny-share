@@ -2,7 +2,9 @@ import mongoose from 'mongoose';
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
 import { getIO, getUserSockets } from '../utils/socket.js';
+import sendEmail from '../utils/sendEmail.js';
 
 
 export const sendMessage = async (req, res) => {
@@ -84,6 +86,66 @@ export const sendMessage = async (req, res) => {
         relatedType: 'Message'
       });
 
+      // Send email notification to recipient
+      try {
+        const recipientUser = await User.findById(recipient).select('email username');
+        if (recipientUser && recipientUser.email) {
+          const senderUsername = req.user.username || 'Someone';
+          
+          // Get product/listing context for better email
+          let listingContext = '';
+          if (product) {
+            const Product = (await import('../models/Product.js')).default;
+            const productDoc = await Product.findById(product).select('title');
+            if (productDoc) {
+              listingContext = ` about your listing "${productDoc.title}"`;
+            }
+          } else if (textbook) {
+            const Textbook = (await import('../models/Textbook.js')).default;
+            const textbookDoc = await Textbook.findById(textbook).select('title');
+            if (textbookDoc) {
+              listingContext = ` about your textbook "${textbookDoc.title}"`;
+            }
+          } else if (note) {
+            try {
+              const Note = (await import('../models/Notes.js')).default;
+              const noteDoc = await Note.findById(note).select('title');
+              if (noteDoc) {
+                listingContext = ` about your note "${noteDoc.title}"`;
+              }
+            } catch (noteErr) {
+              // Note model might not exist or have different structure
+              console.log('Could not load note context:', noteErr.message);
+            }
+          }
+          
+          const subject = `New Message from ${senderUsername} - Campus Marketplace`;
+          const emailText = `Hello ${recipientUser.username || 'there'},
+
+You have received a new message from ${senderUsername}${listingContext} on Campus Marketplace.
+
+Message Preview:
+"${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"
+
+To view and respond to this message, please log in to your account:
+${process.env.FRONTEND_URL || 'http://localhost:5173'}/messages
+
+Thank you for using Campus Marketplace!
+
+Best regards,
+Campus Marketplace Team`;
+
+          // Send email asynchronously (don't wait for it)
+          sendEmail(recipientUser.email, subject, emailText).catch(emailErr => {
+            console.error('Failed to send email notification:', emailErr);
+            // Don't throw - email failure shouldn't break message sending
+          });
+        }
+      } catch (emailErr) {
+        console.error('Error sending email notification:', emailErr);
+        // Don't throw - email failure shouldn't break message sending
+      }
+
       // Emit socket events if io is available
       const io = getIO();
       const userSockets = getUserSockets();
@@ -98,6 +160,15 @@ export const sendMessage = async (req, res) => {
             relatedId: message._id
           });
         }
+        
+        // Also emit to recipient's personal room (more reliable)
+        io.to(`user_${recipient}`).emit('new_message', message);
+        io.to(`user_${recipient}`).emit('new_notification', {
+          type: 'message',
+          title: 'New Message',
+          message: `You have a new message from ${req.user.username || 'someone'}`,
+          relatedId: message._id
+        });
       }
     } catch (notifyErr) {
       console.error('Failed to create/emit notification:', notifyErr);

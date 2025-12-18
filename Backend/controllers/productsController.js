@@ -9,9 +9,17 @@ export const createProduct = async (req, res) => {
     if (!title) return res.status(400).json({ message: 'Title required' });
 
     const files = req.files || [];
+    if (files.length === 0) {
+      return res.status(400).json({ message: 'At least one image is required' });
+    }
+
     const images = files.map(getFileUrl).filter(Boolean);
     const imageKeys = files.map(getFileKey);
     const fileTypes = files.map((f) => getFileType(f.mimetype || f.originalname || ''));
+    
+    if (images.length === 0) {
+      return res.status(400).json({ message: 'Failed to process uploaded images. Please ensure files are valid images.' });
+    }
 
     const newProduct = new Product({
       title,
@@ -91,19 +99,26 @@ export const getProducts = async (req, res) => {
       ? products.filter(p => p.seller && p.seller.school === school)
       : products;
 
-    // Convert local file paths to URLs
+    // Convert local file paths to URLs and add cache-busting
     const baseURL = process.env.BACKEND_URL || 'http://localhost:5000';
     const productsWithUrls = filteredProducts.map(product => {
       if (product.images && Array.isArray(product.images)) {
+        // Use updatedAt timestamp for cache-busting, fallback to createdAt
+        const cacheBuster = product.updatedAt?.getTime() || product.createdAt?.getTime() || Date.now();
         product.images = product.images.map(img => {
           if (img && !img.startsWith('http://') && !img.startsWith('https://')) {
             // Convert local path to URL
             if (img.startsWith('/uploads/') || img.startsWith('uploads/')) {
-              return `${baseURL}${img.startsWith('/') ? '' : '/'}${img}`;
+              return `${baseURL}${img.startsWith('/') ? '' : '/'}${img}?v=${cacheBuster}`;
             }
             // If it's a full path, extract filename
             const filename = img.split(/[/\\]/).pop();
-            return `${baseURL}/uploads/${filename}`;
+            return `${baseURL}/uploads/${filename}?v=${cacheBuster}`;
+          }
+          // For S3 URLs, add cache-busting query parameter
+          if (img && (img.includes('amazonaws.com') || img.includes('s3'))) {
+            const separator = img.includes('?') ? '&' : '?';
+            return `${img}${separator}v=${cacheBuster}`;
           }
           return img;
         });
@@ -128,16 +143,23 @@ export const getProductById = async (req, res) => {
     product.views = (product.views || 0) + 1;
     await product.save();
     
-    // Convert local file paths to URLs
+    // Convert local file paths to URLs and add cache-busting
     const baseURL = process.env.BACKEND_URL || 'http://localhost:5000';
+    // Use updatedAt timestamp for cache-busting, fallback to createdAt
+    const cacheBuster = product.updatedAt?.getTime() || product.createdAt?.getTime() || Date.now();
     if (product.images && Array.isArray(product.images)) {
       product.images = product.images.map(img => {
         if (img && !img.startsWith('http://') && !img.startsWith('https://')) {
           if (img.startsWith('/uploads/') || img.startsWith('uploads/')) {
-            return `${baseURL}${img.startsWith('/') ? '' : '/'}${img}`;
+            return `${baseURL}${img.startsWith('/') ? '' : '/'}${img}?v=${cacheBuster}`;
           }
           const filename = img.split(/[/\\]/).pop();
-          return `${baseURL}/uploads/${filename}`;
+          return `${baseURL}/uploads/${filename}?v=${cacheBuster}`;
+        }
+        // For S3 URLs, add cache-busting query parameter
+        if (img && (img.includes('amazonaws.com') || img.includes('s3'))) {
+          const separator = img.includes('?') ? '&' : '?';
+          return `${img}${separator}v=${cacheBuster}`;
         }
         return img;
       });

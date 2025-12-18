@@ -35,6 +35,8 @@ const fileFilter = (req, file, cb) =>{
     storage: multerS3({
         s3,
         bucket: process.env.AWS_BUCKET_NAME,
+        // Removed acl: 'public-read' - use bucket policy instead for public access
+        // ACLs are disabled by default on newer S3 buckets for security
         metadata: (req, file, cb) => {
             cb(null, { fieldName: file.fieldname });
         },

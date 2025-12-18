@@ -73,10 +73,24 @@ const ProductCard = ({ product, user, token, onDeleted, onEdited }) => {
         <div className="w-full bg-black/5" onDoubleClick={handleLike}>
           {product.images && product.images[0] ? (
             <img
+              key={`${product._id}-${product.updatedAt || product.createdAt}`}
               src={product.images[0]}
               alt={product.title}
               onClick={handleImageClick}
               className="w-full h-[520px] object-cover select-none"
+              onError={(e) => {
+                // If image fails to load, try to refresh with cache-busting
+                const img = e.target;
+                const src = img.src;
+                if (!src.includes('?v=') && !src.includes('&v=')) {
+                  const separator = src.includes('?') ? '&' : '?';
+                  img.src = `${src}${separator}v=${Date.now()}`;
+                } else {
+                  // If already has cache-busting and still fails, show placeholder
+                  img.style.display = 'none';
+                  img.parentElement.innerHTML = '<div class="w-full h-[360px] flex items-center justify-center bg-gray-100 text-gray-400">Image not available</div>';
+                }
+              }}
             />
           ) : (
             <div className="w-full h-[360px] flex items-center justify-center bg-gray-100 text-gray-400">

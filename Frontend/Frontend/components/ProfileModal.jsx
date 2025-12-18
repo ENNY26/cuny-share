@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Edit, LogOut, Mail, BookOpen, Award, Coins } from 'lucide-react';
+import { X, Edit, LogOut, Mail, BookOpen, Award, Coins, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const ProfileModal = ({ user, onClose, onLogout }) => {
@@ -136,6 +136,13 @@ const ProfileModal = ({ user, onClose, onLogout }) => {
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
             >
               ♡ Saved Listings
+            </button>
+
+            <button
+              onClick={() => handleNavigate('/messages')}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+            >
+              <MessageSquare size={18} /> Messages
             </button>
 
             <div className="border-t pt-3">

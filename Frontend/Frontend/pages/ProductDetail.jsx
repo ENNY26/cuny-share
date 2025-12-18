@@ -203,12 +203,24 @@ const ProductDetail = () => {
               {imgs[imgIndex] ? (
                 <>
                   <img 
+                    key={`${product._id}-${imgIndex}-${product.updatedAt || product.createdAt}`}
                     src={imgs[imgIndex]} 
                     alt={product.title}
                     className={`w-full h-[480px] object-cover transition-opacity duration-500 ${
                       imageLoading ? 'opacity-0' : 'opacity-100'
                     }`}
                     onLoad={() => setImageLoading(false)}
+                    onError={(e) => {
+                      const img = e.target;
+                      const src = img.src;
+                      if (!src.includes('?v=') && !src.includes('&v=')) {
+                        const separator = src.includes('?') ? '&' : '?';
+                        img.src = `${src}${separator}v=${Date.now()}`;
+                      } else {
+                        img.style.display = 'none';
+                        setImageLoading(false);
+                      }
+                    }}
                   />
                   {imageLoading && (
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse"></div>
@@ -272,9 +284,18 @@ const ProductDetail = () => {
                     }`}
                   >
                     <img 
+                      key={`thumb-${product._id}-${index}-${product.updatedAt || product.createdAt}`}
                       src={img} 
                       alt={`${product.title} ${index + 1}`}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const img = e.target;
+                        const src = img.src;
+                        if (!src.includes('?v=') && !src.includes('&v=')) {
+                          const separator = src.includes('?') ? '&' : '?';
+                          img.src = `${src}${separator}v=${Date.now()}`;
+                        }
+                      }}
                     />
                   </button>
                 ))}

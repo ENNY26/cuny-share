@@ -47,7 +47,23 @@ const SavedListings = () => {
               className="bg-white border rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition"
             >
               {item.images && item.images[0] ? (
-                <img src={item.images[0]} alt={item.title} className="w-full h-48 object-cover" />
+                <img 
+                  key={`${item._id}-${item.updatedAt || item.createdAt}`}
+                  src={item.images[0]} 
+                  alt={item.title} 
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    const img = e.target;
+                    const src = img.src;
+                    if (!src.includes('?v=') && !src.includes('&v=')) {
+                      const separator = src.includes('?') ? '&' : '?';
+                      img.src = `${src}${separator}v=${Date.now()}`;
+                    } else {
+                      img.style.display = 'none';
+                      img.parentElement.innerHTML = '<div class="w-full h-48 bg-gray-100 flex items-center justify-center">No image</div>';
+                    }
+                  }}
+                />
               ) : (
                 <div className="w-full h-48 bg-gray-100 flex items-center justify-center">No image</div>
               )}

@@ -250,6 +250,13 @@ const NoteList = () => {
           
           <div className="flex items-center gap-3">
             <button
+              onClick={() => navigate('/messages')}
+              className="relative p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Messages"
+            >
+              <MessageSquare size={22} />
+            </button>
+            <button
               onClick={() => navigate('/upload-note')}
               className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold group"
             >
@@ -490,11 +497,21 @@ const NoteList = () => {
                   >
                     <div className="relative h-64 overflow-hidden">
                       <img
+                        key={`${product._id}-${product.updatedAt || product.createdAt}`}
                         src={product.images?.[0] || product.image || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400'}
                         alt={product.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         onError={(e) => {
-                          e.target.src = 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
+                          const img = e.target;
+                          const src = img.src;
+                          // Try cache-busting first if it's not a placeholder
+                          if (!src.includes('unsplash.com') && !src.includes('?v=') && !src.includes('&v=')) {
+                            const separator = src.includes('?') ? '&' : '?';
+                            img.src = `${src}${separator}v=${Date.now()}`;
+                          } else {
+                            // Fallback to placeholder
+                            img.src = 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
+                          }
                         }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
