@@ -66,34 +66,55 @@ export const signup = async (req, res) => {
       });
     }
 
-    // Send email asynchronously (non-blocking) to prevent timeout issues
-    // Respond immediately to the client
-    sendEmail(trimmedEmail, 'Verify your CUNY Share Account', `Your OTP code is: ${otpCode}`)
-      .then((result) => {
+    // In development, send email synchronously to catch errors immediately
+    // In production, send asynchronously to prevent timeout issues
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    
+    if (isDevelopment) {
+      // Synchronous in development - wait for email to send so we can catch errors
+      try {
+        const emailResult = await sendEmail(trimmedEmail, 'Verify your CUNY Share Account', `Your OTP code is: ${otpCode}`);
         console.log('✅ Email sent successfully to:', trimmedEmail);
-        console.log('Message ID:', result?.messageId);
-        console.log('OTP Code:', otpCode); // Log OTP for debugging (remove in production if security concern)
-      })
-      .catch((emailError) => {
-        console.error('❌ EMAIL SENDING FAILED (non-blocking):');
+        console.log('Message ID:', emailResult?.messageId);
+        console.log('OTP Code:', otpCode);
+        res.status(200).json({ 
+          message: 'OTP sent to email',
+          debugOtp: otpCode // Include OTP in response for development
+        });
+      } catch (emailError) {
+        console.error('❌ EMAIL SENDING FAILED:');
         console.error('To:', trimmedEmail);
         console.error('Error:', emailError.message);
         console.error('Error code:', emailError.code);
         console.error('Full error:', emailError);
-        console.error('⚠️ OTP was created but email was not sent. User can request a new OTP.');
-        console.error('OTP Code (for debugging):', otpCode); // Log OTP for debugging
-        // Email sending failed, but OTP is already created
-        // User can request a new OTP if needed
+        console.error('OTP Code (for debugging):', otpCode);
+        // Still return success since OTP was created, but log the error
+        res.status(200).json({ 
+          message: 'OTP generated but email failed to send. Check server logs.',
+          debugOtp: otpCode,
+          emailError: emailError.message
+        });
+      }
+    } else {
+      // Asynchronous in production - don't wait for email
+      sendEmail(trimmedEmail, 'Verify your CUNY Share Account', `Your OTP code is: ${otpCode}`)
+        .then((result) => {
+          console.log('✅ Email sent successfully to:', trimmedEmail);
+          console.log('Message ID:', result?.messageId);
+        })
+        .catch((emailError) => {
+          console.error('❌ EMAIL SENDING FAILED (non-blocking):');
+          console.error('To:', trimmedEmail);
+          console.error('Error:', emailError.message);
+          console.error('Error code:', emailError.code);
+          console.error('Full error:', emailError);
+        });
+      
+      const hasEmailConfig = process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL;
+      res.status(200).json({ 
+        message: hasEmailConfig ? 'OTP sent to email' : 'OTP generated. Please check your email configuration.'
       });
-
-    // Respond immediately without waiting for email
-    // In production, you might want to check if email config exists before saying "sent"
-    const hasEmailConfig = process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL;
-    res.status(200).json({ 
-      message: hasEmailConfig ? 'OTP sent to email' : 'OTP generated. Please check your email configuration.',
-      // Include OTP in response for development/testing (remove in production)
-      ...(process.env.NODE_ENV !== 'production' && { debugOtp: otpCode })
-    });
+    }
   } catch (err) {
     console.error('signup error:', err);
     res.status(500).json({ message: 'Something went wrong', error: err.message });
@@ -270,31 +291,53 @@ export const forgotPassword = async (req, res) => {
 
     // Send email asynchronously (non-blocking) to prevent timeout issues
     // Respond immediately to the client
-    sendEmail(trimmedEmail, 'Reset your CUNY Share Password', `Your OTP code is: ${otpCode}`)
-      .then((result) => {
+    // In development, send email synchronously to catch errors immediately
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    
+    if (isDevelopment) {
+      // Synchronous in development - wait for email to send so we can catch errors
+      try {
+        const emailResult = await sendEmail(trimmedEmail, 'Reset your CUNY Share Password', `Your OTP code is: ${otpCode}`);
         console.log('✅ Email sent successfully to:', trimmedEmail);
-        console.log('Message ID:', result?.messageId);
-        console.log('OTP Code:', otpCode); // Log OTP for debugging
-      })
-      .catch((emailError) => {
-        console.error('❌ EMAIL SENDING FAILED (non-blocking):');
+        console.log('Message ID:', emailResult?.messageId);
+        console.log('OTP Code:', otpCode);
+        res.status(200).json({
+          message: 'OTP sent to email',
+          debugOtp: otpCode
+        });
+      } catch (emailError) {
+        console.error('❌ EMAIL SENDING FAILED:');
         console.error('To:', trimmedEmail);
         console.error('Error:', emailError.message);
         console.error('Error code:', emailError.code);
         console.error('Full error:', emailError);
-        console.error('⚠️ OTP was created but email was not sent. User can request a new OTP.');
-        console.error('OTP Code (for debugging):', otpCode); // Log OTP for debugging
-        // Email sending failed, but OTP is already created
-        // User can request a new OTP if needed
+        console.error('OTP Code (for debugging):', otpCode);
+        res.status(200).json({
+          message: 'OTP generated but email failed to send. Check server logs.',
+          debugOtp: otpCode,
+          emailError: emailError.message
+        });
+      }
+    } else {
+      // Asynchronous in production
+      sendEmail(trimmedEmail, 'Reset your CUNY Share Password', `Your OTP code is: ${otpCode}`)
+        .then((result) => {
+          console.log('✅ Email sent successfully to:', trimmedEmail);
+          console.log('Message ID:', result?.messageId);
+        })
+        .catch((emailError) => {
+          console.error('❌ EMAIL SENDING FAILED (non-blocking):');
+          console.error('To:', trimmedEmail);
+          console.error('Error:', emailError.message);
+          console.error('Error code:', emailError.code);
+          console.error('Full error:', emailError);
+        });
+      
+      const hasEmailConfig = process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL;
+      res.status(200).json({
+        message: hasEmailConfig ? 'OTP sent to email' : 'OTP generated. Please check your email configuration.'
       });
-
-    // Respond immediately without waiting for email
-    const hasEmailConfig = process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL;
-    res.status(200).json({
-      message: hasEmailConfig ? 'OTP sent to email' : 'OTP generated. Please check your email configuration.',
-      // Include OTP in response for development/testing (remove in production)
-      ...(process.env.NODE_ENV !== 'production' && { debugOtp: otpCode })
-    });
+    }
 
   } catch (error) {
     console.error('forgotPassword error:', error);
@@ -473,33 +516,53 @@ export const resendOtp = async (req, res) => {
       });
     }
 
-    // Send email asynchronously (non-blocking) to prevent timeout issues
-    // Respond immediately to the client
-    sendEmail(trimmedEmail, emailSubject, `Your OTP code is: ${otpCode}`)
-      .then((result) => {
+    // In development, send email synchronously to catch errors immediately
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    
+    if (isDevelopment) {
+      // Synchronous in development
+      try {
+        const emailResult = await sendEmail(trimmedEmail, emailSubject, `Your OTP code is: ${otpCode}`);
         console.log('✅ Email sent successfully for resend OTP to:', trimmedEmail);
-        console.log('Message ID:', result?.messageId);
-        console.log('OTP Code:', otpCode); // Log OTP for debugging
-      })
-      .catch((emailError) => {
-        console.error('❌ EMAIL SENDING FAILED (non-blocking):');
+        console.log('Message ID:', emailResult?.messageId);
+        console.log('OTP Code:', otpCode);
+        res.status(200).json({
+          message: 'New OTP sent to email',
+          debugOtp: otpCode
+        });
+      } catch (emailError) {
+        console.error('❌ EMAIL SENDING FAILED:');
         console.error('To:', trimmedEmail);
         console.error('Error:', emailError.message);
         console.error('Error code:', emailError.code);
         console.error('Full error:', emailError);
-        console.error('⚠️ OTP was created but email was not sent. User can request a new OTP.');
-        console.error('OTP Code (for debugging):', otpCode); // Log OTP for debugging
-        // Email sending failed, but OTP is already created
-        // User can request a new OTP if needed
+        console.error('OTP Code (for debugging):', otpCode);
+        res.status(200).json({
+          message: 'New OTP generated but email failed to send. Check server logs.',
+          debugOtp: otpCode,
+          emailError: emailError.message
+        });
+      }
+    } else {
+      // Asynchronous in production
+      sendEmail(trimmedEmail, emailSubject, `Your OTP code is: ${otpCode}`)
+        .then((result) => {
+          console.log('✅ Email sent successfully for resend OTP to:', trimmedEmail);
+          console.log('Message ID:', result?.messageId);
+        })
+        .catch((emailError) => {
+          console.error('❌ EMAIL SENDING FAILED (non-blocking):');
+          console.error('To:', trimmedEmail);
+          console.error('Error:', emailError.message);
+          console.error('Error code:', emailError.code);
+          console.error('Full error:', emailError);
+        });
+      
+      const hasEmailConfig = process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL;
+      res.status(200).json({
+        message: hasEmailConfig ? 'New OTP sent to email' : 'New OTP generated. Please check your email configuration.'
       });
-
-    // Respond immediately without waiting for email
-    const hasEmailConfig = process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL;
-    res.status(200).json({ 
-      message: hasEmailConfig ? 'New OTP sent to email' : 'New OTP generated. Please check your email configuration.',
-      // Include OTP in response for development/testing (remove in production)
-      ...(process.env.NODE_ENV !== 'production' && { debugOtp: otpCode })
-    });
+    }
   } catch (error) {
     console.error('resendOtp error:', error);
     res.status(500).json({ message: 'Failed to resend OTP', error: error.message });
