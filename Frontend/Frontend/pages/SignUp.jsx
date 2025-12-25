@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import axios from '../src/api/axios';
 import { ArrowRight, ArrowLeft, Sparkles, SkipForward } from 'lucide-react';
 
@@ -28,6 +29,7 @@ const Signup = () => {
   const [message, setMessage] = useState('');
   const [otp, setOtp] = useState('');
   const navigate = useNavigate();
+  const { verifyOtp: verifyOtpContext } = useAuth();
 
   const interestOptions = [
     'Buying items',
@@ -91,13 +93,13 @@ const Signup = () => {
     setLoading(true);
     
     try {
-      const { data } = await axios.post('/api/auth/verify', {
-        email: formData.email,
-        otp
-      });
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      navigate('/');
+      // Use AuthContext's verifyOtp to properly update auth state
+      const success = await verifyOtpContext({ email: formData.email, otp });
+      if (success) {
+        navigate('/main-home'); // Go to main home instead of landing page
+      } else {
+        setError('Verification failed. Please check your OTP and try again.');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Verification failed');
     } finally {

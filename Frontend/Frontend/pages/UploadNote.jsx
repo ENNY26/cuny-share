@@ -73,7 +73,7 @@ const UploadNote = () => {
           },
         });
         toast.success('Listing created successfully!');
-        navigate('/');
+        navigate('/notes'); // Go to listings page instead of home
       } catch (err) {
         console.error('Upload error', err);
         toast.error(err.response?.data?.message || 'Upload failed. Please try again.');
@@ -99,7 +99,7 @@ const UploadNote = () => {
           },
         });
         toast.success('Forum post created successfully!');
-        navigate('/');
+        navigate('/notes'); // Go to listings page instead of home
       } catch (err) {
         console.error('Upload error', err);
         toast.error(err.response?.data?.message || 'Upload failed. Please try again.');
@@ -115,7 +115,7 @@ const UploadNote = () => {
         {/* Modern Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors group"
           >
             <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />

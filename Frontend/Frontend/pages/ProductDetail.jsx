@@ -103,7 +103,7 @@ const ProductDetail = () => {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       toast.success('Listing deleted successfully');
-      navigate('/');
+      navigate('/notes'); // Go back to listings instead of home
     } catch (err) {
       console.error('Delete error', err);
       toast.error('Failed to delete listing');
@@ -172,7 +172,7 @@ const ProductDetail = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Listing Not Found</h2>
           <p className="text-gray-600 mb-6">The listing you're looking for doesn't exist or has been removed.</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/notes')}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold"
           >
             Browse Listings

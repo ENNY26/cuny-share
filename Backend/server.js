@@ -31,6 +31,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://cuny-share.vercel.app',
+   'https://cunyshare.xyz',
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
 ].filter(Boolean); // Remove any undefined values
 

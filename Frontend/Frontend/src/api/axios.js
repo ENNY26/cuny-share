@@ -21,13 +21,17 @@ instance.interceptors.request.use(
 );
 
 // Response interceptor to handle common errors
+// Note: We don't redirect here to preserve navigation history
+// Individual components should handle 401 errors appropriately
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access (e.g., redirect to login)
+      // Clear auth data but don't redirect - let components handle it
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem('user');
+      // Don't use window.location.href as it causes full page reload
+      // Components should handle navigation using React Router
     }
     return Promise.reject(error);
   }

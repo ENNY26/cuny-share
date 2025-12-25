@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -8,6 +8,10 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const { login, loading, error, setError } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get the page the user was trying to access before being redirected to login
+  const from = location.state?.from?.pathname || '/main-home';
 
   const handleChange = (e) => {
     setError(null);
@@ -23,7 +27,8 @@ const Login = () => {
     const success = await login(formData);
     if (success) {
       toast.success('Login successful');
-      navigate('/main-home');
+      // Navigate back to where they were trying to go, or main-home as default
+      navigate(from, { replace: true });
     } else {
       toast.error(error || 'Login failed');
     }

@@ -14,21 +14,51 @@ import ForgotPassword from '../pages/ForgotPassword.jsx';
 import UserProfile from '../pages/UserProfile.jsx';
 import SavedListings from '../pages/SavedListings.jsx';
 import Messages from '../pages/Messages.jsx';
+import ProtectedRoute from '../components/ProtectedRoute.jsx';
+
 const App = () => {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="main-home" element={<MainHome />} />
+        <Route path="/main-home" element={<MainHome />} />
         <Route path="/notes" element={<NoteList />} />
         <Route path="/product/:id" element={<ProductDetail />} />
-        <Route path="/upload-note" element={<UploadNote />} />
+        <Route 
+          path="/upload-note" 
+          element={
+            <ProtectedRoute>
+              <UploadNote />
+            </ProtectedRoute>
+          } 
+        />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route path="/profile/:id" element={<UserProfile />} />
-        <Route path="/saved" element={<SavedListings />} />
-        <Route path="/messages" element={<Messages />} />
+        <Route 
+          path="/profile/:id" 
+          element={
+            <ProtectedRoute>
+              <UserProfile />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/saved" 
+          element={
+            <ProtectedRoute>
+              <SavedListings />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/messages" 
+          element={
+            <ProtectedRoute>
+              <Messages />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
       <ToastContainer position="top-right" autoClose={4000} />
     </BrowserRouter>
