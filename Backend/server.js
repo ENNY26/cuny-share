@@ -31,16 +31,40 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://cuny-share.vercel.app',
-   'https://cunyshare.xyz',
+  'https://cunyshare.xyz',
+  'https://www.cunyshare.xyz',
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
 ].filter(Boolean); // Remove any undefined values
 
+// Helper function to normalize origin (remove trailing slash and normalize www)
+const normalizeOrigin = (origin) => {
+  if (!origin) return origin;
+  // Remove trailing slash and normalize to lowercase for comparison
+  return origin.replace(/\/$/, '').toLowerCase();
+};
+
+// Helper to get domain without www for comparison
+const getBaseDomain = (url) => {
+  return url.replace(/^https?:\/\/(www\.)?/, '').toLowerCase();
+};
 
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    const normalizedOrigin = normalizeOrigin(origin);
+    const originBaseDomain = getBaseDomain(origin);
+    
+    // Check if origin matches any allowed origin (exact match or same base domain)
+    const isAllowed = allowedOrigins.some(allowed => {
+      const normalizedAllowed = normalizeOrigin(allowed);
+      const allowedBaseDomain = getBaseDomain(allowed);
+      
+      // Exact match or same base domain (handles www variations)
+      return normalizedOrigin === normalizedAllowed || originBaseDomain === allowedBaseDomain;
+    });
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error(`CORS policy: Origin ${origin} not allowed`));
