@@ -21,7 +21,12 @@ PORT=5000
 # Frontend URL (for CORS)
 FRONTEND_URL=http://localhost:5173
 
-# Email Configuration (Brevo/Sendinblue)
+# Email Configuration
+# Option 1: Resend API (RECOMMENDED - works on all hosting platforms)
+RESEND_API_KEY=re_your_resend_api_key_here
+RESEND_FROM_EMAIL=noreply@yourdomain.com  # Optional, defaults to SENDER_EMAIL
+
+# Option 2: SMTP (Brevo/Sendinblue) - Works for local development
 SMTP_USER=your_brevo_smtp_username
 SMTP_PWD=your_brevo_smtp_password
 SENDER_EMAIL=your_sender_email@example.com
@@ -44,7 +49,14 @@ PORT=5000
 # Frontend URL (your deployed frontend URL)
 FRONTEND_URL=https://your-frontend-url.vercel.app
 
-# Email Configuration (Brevo/Sendinblue)
+# Email Configuration
+# Option 1: Resend API (RECOMMENDED for production/hosting platforms like Render, Heroku)
+# Get your API key at: https://resend.com/api-keys
+RESEND_API_KEY=re_your_resend_api_key_here
+RESEND_FROM_EMAIL=noreply@yourdomain.com  # Optional, defaults to SENDER_EMAIL
+
+# Option 2: SMTP (Brevo/Sendinblue) - May fail on hosting platforms due to port restrictions
+# Only use if Resend API is not available
 SMTP_USER=your_brevo_smtp_username
 SMTP_PWD=your_brevo_smtp_password
 SENDER_EMAIL=your_sender_email@example.com
@@ -126,10 +138,60 @@ After setting up:
 
 ---
 
+## 📧 Email Configuration Guide
+
+### Why Resend API is Recommended for Production
+
+Many hosting platforms (Render, Heroku, Railway, etc.) **block outbound SMTP connections** on ports 587 and 465. This causes connection timeouts when trying to send emails via SMTP.
+
+**Solution**: Use **Resend API** instead, which works reliably on all hosting platforms.
+
+### Setting Up Resend API (Recommended)
+
+1. **Sign up for Resend**: Go to https://resend.com and create a free account
+2. **Get your API key**: 
+   - Go to https://resend.com/api-keys
+   - Click "Create API Key"
+   - Copy the key (starts with `re_`)
+3. **Add to environment variables**:
+   ```env
+   RESEND_API_KEY=re_your_api_key_here
+   RESEND_FROM_EMAIL=noreply@yourdomain.com  # Optional
+   ```
+4. **Verify domain** (optional but recommended):
+   - Add your domain in Resend dashboard
+   - Verify DNS records
+   - Use verified domain in `RESEND_FROM_EMAIL`
+
+### Using SMTP (Local Development Only)
+
+SMTP works fine for local development but may fail in production:
+
+```env
+SMTP_USER=your_brevo_smtp_username
+SMTP_PWD=your_brevo_smtp_password
+SENDER_EMAIL=your_sender_email@example.com
+```
+
+### Email Service Priority
+
+The system will use email services in this order:
+1. **Resend API** (if `RESEND_API_KEY` is set) - Recommended
+2. **SMTP** (if `SMTP_USER`, `SMTP_PWD`, `SENDER_EMAIL` are set) - Fallback
+
+### Checking Email Configuration
+
+After starting your server, check the startup logs for email configuration status. You can also visit:
+- `GET /api/email-config` - Returns current email configuration status
+
 ## 🛠️ Troubleshooting
 
 - **CORS errors**: Make sure `FRONTEND_URL` in backend matches your frontend URL exactly
 - **Connection timeout**: Verify `VITE_BACKEND_URL` in frontend matches your backend URL
-- **Email not sending**: Check that all email environment variables are set correctly
+- **Email not sending**: 
+  - For production: Use Resend API (`RESEND_API_KEY`) instead of SMTP (SMTP ports are often blocked on hosting platforms)
+  - For local: Check that SMTP credentials are set correctly
+  - Check server startup logs for email configuration warnings
+- **SMTP connection timeout in production**: This is common on hosting platforms. Switch to Resend API by setting `RESEND_API_KEY` environment variable
 - **Environment variables not loading**: Restart your dev server after creating/updating `.env` files
 

@@ -119,44 +119,60 @@ const sendEmailViaSMTP = async (to, subject, text, retries = 2) => {
  */
 const sendEmail = async (to, subject, text) => {
   try {
+    const isProduction = process.env.NODE_ENV === 'production';
     console.log('📧 Attempting to send email to:', to);
     console.log('Environment:', process.env.NODE_ENV || 'development');
     
     // Prefer Resend API if available (works better on hosting platforms like Render)
     if (process.env.RESEND_API_KEY) {
+      console.log('✅ Using Resend API (recommended for production)');
       try {
         return await sendEmailViaResend(to, subject, text);
       } catch (resendError) {
         console.warn('⚠️ Resend API failed, falling back to SMTP:', resendError.message);
         // Fall through to SMTP fallback
       }
+    } else if (isProduction) {
+      console.warn('⚠️ WARNING: RESEND_API_KEY not set in production!');
+      console.warn('⚠️ SMTP connections often fail on hosting platforms (Render, Heroku, etc.)');
+      console.warn('⚠️ RECOMMENDED: Set RESEND_API_KEY environment variable for reliable email delivery');
+      console.warn('⚠️ Get your API key at: https://resend.com/api-keys');
     }
     
     // Fallback to SMTP (works better for local development)
     if (process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL) {
       console.log('📧 Using SMTP fallback...');
+      if (isProduction) {
+        console.warn('⚠️ SMTP may fail due to hosting platform restrictions');
+      }
       const result = await sendEmailViaSMTP(to, subject, text);
       console.log('✅ Email sent successfully via SMTP!');
       return result;
     }
     
     // No email service configured
-    throw new Error('No email service configured. Please set either RESEND_API_KEY or SMTP credentials.');
+    const errorMsg = isProduction
+      ? 'No email service configured. Please set RESEND_API_KEY (recommended) or SMTP credentials (SMTP_USER, SMTP_PWD, SENDER_EMAIL).'
+      : 'No email service configured. Please set either RESEND_API_KEY or SMTP credentials.';
+    throw new Error(errorMsg);
     
   } catch (error) {
     console.error('❌ Email sending failed!');
     console.error('To:', to);
     console.error('Error message:', error.message);
     console.error('Error code:', error.code);
-    console.error('Error stack:', error.stack);
     
-    // Provide helpful error messages
-    if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
-      throw new Error(`Connection timeout: Unable to connect to email server. For hosting platforms like Render, consider using Resend API (set RESEND_API_KEY) instead of SMTP.`);
+    // Provide helpful error messages with actionable guidance
+    if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT') || error.message.includes('Connection timeout')) {
+      const isProduction = process.env.NODE_ENV === 'production';
+      const guidance = isProduction
+        ? 'SMTP connections are often blocked on hosting platforms. SOLUTION: Set RESEND_API_KEY environment variable (get it at https://resend.com/api-keys). Resend API works reliably on all hosting platforms.'
+        : 'SMTP connection timed out. Check your network/firewall settings or consider using Resend API instead.';
+      throw new Error(`Connection timeout: Unable to connect to email server. ${guidance}`);
     } else if (error.message.includes('ECONNREFUSED')) {
-      throw new Error(`Connection refused: Email server is not accessible. Please verify your email service configuration.`);
+      throw new Error(`Connection refused: Email server is not accessible. Please verify your email service configuration or switch to Resend API.`);
     } else if (error.message.includes('authentication')) {
-      throw new Error(`Authentication failed: Please verify your email service credentials.`);
+      throw new Error(`Authentication failed: Please verify your email service credentials (SMTP_USER, SMTP_PWD) or use Resend API instead.`);
     }
     
     throw error;

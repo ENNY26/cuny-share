@@ -103,13 +103,23 @@ app.get('/api/health', (req, res) => {
 // Email configuration diagnostic endpoint (for debugging)
 app.get('/api/email-config', (req, res) => {
   const config = {
+    hasRESEND_API_KEY: !!process.env.RESEND_API_KEY,
     hasSMTP_USER: !!process.env.SMTP_USER,
     hasSMTP_PWD: !!process.env.SMTP_PWD,
     hasSENDER_EMAIL: !!process.env.SENDER_EMAIL,
     SMTP_USER_preview: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}...` : 'NOT SET',
     SENDER_EMAIL: process.env.SENDER_EMAIL || 'NOT SET',
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'NOT SET',
     NODE_ENV: process.env.NODE_ENV || 'NOT SET',
-    isConfigured: !!(process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL)
+    isResendConfigured: !!process.env.RESEND_API_KEY,
+    isSMTPConfigured: !!(process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL),
+    recommendation: process.env.RESEND_API_KEY 
+      ? 'Using Resend API (recommended)' 
+      : process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL
+        ? (process.env.NODE_ENV === 'production' 
+          ? 'Using SMTP (may fail on hosting platforms - consider Resend API)' 
+          : 'Using SMTP (OK for local development)')
+        : 'No email service configured'
   };
   
   res.status(200).json(config);
@@ -337,6 +347,40 @@ mongoose.connect(process.env.MONGO_URI, {
 })
 .then(() => {
   console.log('MongoDB connected');
+  
+  // Email configuration check
+  const isProduction = process.env.NODE_ENV === 'production';
+  const hasResend = !!process.env.RESEND_API_KEY;
+  const hasSMTP = !!(process.env.SMTP_USER && process.env.SMTP_PWD && process.env.SENDER_EMAIL);
+  
+  console.log('\n📧 Email Configuration Status:');
+  if (hasResend) {
+    console.log('✅ Resend API: Configured (Recommended for production)');
+  } else {
+    console.log('❌ Resend API: NOT configured');
+    if (isProduction) {
+      console.log('⚠️  WARNING: Resend API is recommended for production hosting platforms');
+      console.log('⚠️  Get your API key at: https://resend.com/api-keys');
+    }
+  }
+  
+  if (hasSMTP) {
+    console.log('✅ SMTP: Configured');
+    if (isProduction && !hasResend) {
+      console.log('⚠️  WARNING: SMTP connections often fail on hosting platforms (Render, Heroku, etc.)');
+      console.log('⚠️  SMTP ports (587, 465) may be blocked by your hosting provider');
+      console.log('⚠️  RECOMMENDED: Set RESEND_API_KEY for reliable email delivery');
+    }
+  } else {
+    console.log('❌ SMTP: NOT configured');
+  }
+  
+  if (!hasResend && !hasSMTP) {
+    console.log('❌ ERROR: No email service configured!');
+    console.log('❌ Set either RESEND_API_KEY (recommended) or SMTP credentials');
+  }
+  console.log('');
+  
   httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })
 .catch((err) => console.error('DB Connection Failed:', err));
