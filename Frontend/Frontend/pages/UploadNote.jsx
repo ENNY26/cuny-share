@@ -150,7 +150,13 @@ const UploadNote = () => {
                 Product Listing
               </button>
               <button
-                onClick={() => setPostType('forum')}
+                onClick={() => {
+                  setPostType('forum');
+                  toast.info('Forum feature coming soon!', {
+                    position: 'top-center',
+                    autoClose: 3000,
+                  });
+                }}
                 className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all ${
                   postType === 'forum'
                     ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105'
@@ -163,9 +169,32 @@ const UploadNote = () => {
           </div>
         </div>
 
-        {/* Modern Form */}
-        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 overflow-hidden">
-          <form onSubmit={handleSubmit} className="p-8 space-y-8">
+        {/* Modern Form or Coming Soon */}
+        {postType === 'forum' ? (
+          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+            <div className="p-16 text-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Sparkles className="text-blue-600" size={48} />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Coming Soon</h2>
+              <p className="text-xl text-gray-600 mb-2">
+                The Forum feature is under development
+              </p>
+              <p className="text-gray-500">
+                We're working hard to bring you an amazing community forum experience. Stay tuned!
+              </p>
+              <button
+                onClick={() => setPostType('product')}
+                className="mt-8 inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
+              >
+                <ArrowLeft size={20} />
+                Back to Product Listing
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+            <form onSubmit={handleSubmit} className="p-8 space-y-8">
             {/* Photos Upload - Enhanced */}
             <div>
               <label className="block text-lg font-bold text-gray-900 mb-4">
@@ -369,32 +398,35 @@ const UploadNote = () => {
           </form>
         </div>
 
-        {/* Tips */}
-        <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200">
-          <h3 className="font-bold text-blue-900 mb-3 text-lg flex items-center gap-2">
-            <Sparkles className="text-blue-600" size={20} />
-            Tips for a great listing
-          </h3>
-          <ul className="text-sm text-blue-800 space-y-2">
-            <li className="flex items-start gap-2">
-              <Check className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
-              <span>Use clear, well-lit photos from multiple angles</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Check className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
-              <span>Write a detailed description including any flaws</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Check className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
-              <span>Set a fair price based on condition and original value</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Check className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
-              <span>Be responsive to potential buyers</span>
-            </li>
-          </ul>
-        </div>
-      </div>
+        {/* Tips - Only show for product listings */}
+        {postType === 'product' && (
+          <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200">
+            <h3 className="font-bold text-blue-900 mb-3 text-lg flex items-center gap-2">
+              <Sparkles className="text-blue-600" size={20} />
+              Tips for a great listing
+            </h3>
+            <ul className="text-sm text-blue-800 space-y-2">
+              <li className="flex items-start gap-2">
+                <Check className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
+                <span>Use clear, well-lit photos from multiple angles</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
+                <span>Write a detailed description including any flaws</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
+                <span>Set a fair price based on condition and original value</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
+                <span>Be responsive to potential buyers</span>
+              </li>
+            </ul>
+          </div>
+        )}
+          </div>
+        )}
     </div>
   );
 };
