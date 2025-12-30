@@ -85,12 +85,8 @@ const Home = () => {
         >
           <motion.div variants={fadeInUp} className="lg:w-1/2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                <GraduationCap className="text-white" size={20} />
-              </div>
-              <span className="text-sm font-semibold text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                Independent Marketplace • Not Affiliated with CUNY
-              </span>
+             
+              
             </div>
             
             <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
