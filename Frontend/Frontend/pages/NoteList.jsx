@@ -578,9 +578,7 @@ const NoteList = () => {
                 title="Messages"
               >
                 <MessageSquare size={20} />
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  3
-                </span>
+               
               </button>
               <button
                 onClick={() => navigate('/upload-note')}
