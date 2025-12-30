@@ -156,12 +156,30 @@ Many hosting platforms (Render, Heroku, Railway, etc.) **block outbound SMTP con
 3. **Add to environment variables**:
    ```env
    RESEND_API_KEY=re_your_api_key_here
-   RESEND_FROM_EMAIL=noreply@yourdomain.com  # Optional
+   RESEND_FROM_EMAIL=noreply@yourdomain.com  # Optional - see below
    ```
-4. **Verify domain** (optional but recommended):
-   - Add your domain in Resend dashboard
-   - Verify DNS records
-   - Use verified domain in `RESEND_FROM_EMAIL`
+
+#### Important: Domain Verification
+
+**Resend requires domain verification** before you can send from custom email addresses. Common email domains (Gmail, Yahoo, etc.) **cannot be verified** and will be rejected.
+
+**Options:**
+
+1. **Use Resend's default sender** (easiest, works immediately):
+   - Don't set `RESEND_FROM_EMAIL`, or set it to `onboarding@resend.dev`
+   - Emails will be sent from `onboarding@resend.dev`
+   - ✅ Works immediately, no setup required
+   - ⚠️ Emails may go to spam more often
+
+2. **Verify your own domain** (recommended for production):
+   - Add your domain in Resend dashboard: https://resend.com/domains
+   - Add the required DNS records (SPF, DKIM, DMARC)
+   - Use your verified domain: `RESEND_FROM_EMAIL=noreply@yourdomain.com`
+   - ✅ Professional sender address
+   - ✅ Better email deliverability
+   - ⚠️ Requires domain ownership and DNS access
+
+**Automatic Fallback**: If you try to use an unverified domain (like Gmail), the system will automatically retry with `onboarding@resend.dev` so emails still get sent.
 
 ### Using SMTP (Local Development Only)
 
@@ -193,5 +211,9 @@ After starting your server, check the startup logs for email configuration statu
   - For local: Check that SMTP credentials are set correctly
   - Check server startup logs for email configuration warnings
 - **SMTP connection timeout in production**: This is common on hosting platforms. Switch to Resend API by setting `RESEND_API_KEY` environment variable
+- **Resend domain verification error**: If you see "domain is not verified" error:
+  - The system will automatically retry with `onboarding@resend.dev` (check logs)
+  - To use a custom sender: Verify your domain at https://resend.com/domains
+  - Note: Gmail, Yahoo, and other common email domains cannot be verified - use your own domain or the default sender
 - **Environment variables not loading**: Restart your dev server after creating/updating `.env` files
 

@@ -12,7 +12,20 @@ const sendEmailViaResend = async (to, subject, text) => {
     throw new Error('Resend API key not configured. Set RESEND_API_KEY environment variable.');
   }
 
-  const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+  // Determine sender email - prefer RESEND_FROM_EMAIL, fallback to SENDER_EMAIL, then default
+  let fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+  
+  // Check if the email domain needs verification (Gmail, Yahoo, etc.)
+  const emailDomain = fromEmail.split('@')[1]?.toLowerCase();
+  const commonEmailDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com'];
+  const needsVerification = commonEmailDomains.includes(emailDomain);
+  
+  // If using a common email domain, use Resend's default sender instead
+  if (needsVerification && fromEmail !== 'onboarding@resend.dev') {
+    console.warn(`⚠️ Domain ${emailDomain} requires verification in Resend. Using default sender instead.`);
+    console.warn(`⚠️ To use ${fromEmail}, verify your domain at https://resend.com/domains`);
+    fromEmail = 'onboarding@resend.dev';
+  }
   
   console.log('📧 Sending email via Resend API to:', to);
   console.log('From:', fromEmail);
@@ -26,6 +39,37 @@ const sendEmailViaResend = async (to, subject, text) => {
 
   if (error) {
     console.error('❌ Resend API error:', error);
+    
+    // Handle domain verification error specifically
+    if (error.statusCode === 403 && error.message?.includes('domain is not verified')) {
+      const suggestedFrom = process.env.RESEND_FROM_EMAIL || process.env.SENDER_EMAIL;
+      if (suggestedFrom && suggestedFrom !== 'onboarding@resend.dev') {
+        console.warn(`⚠️ Domain not verified. Retrying with Resend's default sender (onboarding@resend.dev)...`);
+        // Retry with default sender
+        try {
+          const retryResult = await resend.emails.send({
+            from: 'onboarding@resend.dev',
+            to: [to],
+            subject: subject,
+            text: text,
+          });
+          
+          if (retryResult.error) {
+            throw new Error(`Resend API error: ${retryResult.error.message || JSON.stringify(retryResult.error)}`);
+          }
+          
+          console.log('✅ Email sent successfully via Resend (using default sender)!');
+          console.log('⚠️ NOTE: To use your custom sender email, verify your domain at https://resend.com/domains');
+          console.log('Message ID:', retryResult.data?.id);
+          return { messageId: retryResult.data?.id, success: true };
+        } catch (retryError) {
+          throw new Error(`Resend API retry failed: ${retryError.message}`);
+        }
+      }
+      
+      throw new Error(`Domain verification required: The domain in your sender email (${suggestedFrom}) is not verified in Resend. Please verify your domain at https://resend.com/domains or use 'onboarding@resend.dev' as RESEND_FROM_EMAIL.`);
+    }
+    
     throw new Error(`Resend API error: ${error.message || JSON.stringify(error)}`);
   }
 
