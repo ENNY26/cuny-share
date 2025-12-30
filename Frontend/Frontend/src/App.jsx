@@ -14,6 +14,9 @@ import ForgotPassword from '../pages/ForgotPassword.jsx';
 import UserProfile from '../pages/UserProfile.jsx';
 import SavedListings from '../pages/SavedListings.jsx';
 import Messages from '../pages/Messages.jsx';
+import PrivacyPolicy from '../pages/PrivacyPolicy.jsx';
+import TermsOfService from '../pages/TermsOfService.jsx';
+import CommunityGuidelines from '../pages/CommunityGuidelines.jsx';
 import ProtectedRoute from '../components/ProtectedRoute.jsx';
 
 const App = () => {
@@ -35,6 +38,9 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/community-guidelines" element={<CommunityGuidelines />} />
         <Route 
           path="/profile/:id" 
           element={

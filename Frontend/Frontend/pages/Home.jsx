@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Users, 
@@ -7,10 +8,14 @@ import {
   ArrowRight,
   GraduationCap,
   Shield,
-  Heart
+  Heart,
+  MessageSquare
 } from 'lucide-react';
+import FeedbackModal from '../components/FeedbackModal';
 
 const Home = () => {
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -229,30 +234,59 @@ const Home = () => {
             {[
               {
                 title: 'Navigation',
-                links: ['Home', 'About', 'Contact', 'Resources']
+                links: [
+                  { name: 'Home', path: '/' },
+                  { name: 'Browse Listings', path: '/notes' }
+                ]
               },
               {
                 title: 'Legal',
-                links: ['Privacy Policy', 'Terms of Service', 'Code of Conduct']
+                links: [
+                  { name: 'Privacy Policy', path: '/privacy-policy' },
+                  { name: 'Terms of Service', path: '/terms-of-service' },
+                  { name: 'Community Guidelines', path: '/community-guidelines' }
+                ]
               },
               {
                 title: 'Support',
-                links: ['Help Center', 'Campus Resources', 'Contact Support']
+                links: [
+                  { name: 'Give Feedback', path: '#', onClick: () => setFeedbackModalOpen(true) }
+                ]
               }
             ].map((section, index) => (
               <div key={index}>
                 <h4 className="font-semibold text-lg mb-4">{section.title}</h4>
                 <ul className="space-y-3">
-                  {section.links.map((link, linkIndex) => (
-                    <li key={linkIndex}>
-                      <Link 
-                        to={`/${link.toLowerCase().replace(' ', '-')}`}
-                        className="text-gray-400 hover:text-white transition-colors duration-200"
-                      >
-                        {link}
-                      </Link>
-                    </li>
-                  ))}
+                  {section.links.map((link, linkIndex) => {
+                    const linkPath = typeof link === 'string' 
+                      ? `/${link.toLowerCase().replace(' ', '-')}` 
+                      : link.path;
+                    const linkName = typeof link === 'string' ? link : link.name;
+                    
+                    if (link.onClick) {
+                      return (
+                        <li key={linkIndex}>
+                          <button
+                            onClick={link.onClick}
+                            className="text-gray-400 hover:text-white transition-colors duration-200 text-left"
+                          >
+                            {linkName}
+                          </button>
+                        </li>
+                      );
+                    }
+                    
+                    return (
+                      <li key={linkIndex}>
+                        <Link 
+                          to={linkPath}
+                          className="text-gray-400 hover:text-white transition-colors duration-200"
+                        >
+                          {linkName}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
@@ -263,22 +297,23 @@ const Home = () => {
               © {new Date().getFullYear()} CUNY Share. Made with <Heart size={14} className="inline text-red-400" /> for CUNY students.
             </p>
             <div className="flex items-center gap-6 text-gray-400">
-              <span>Follow us:</span>
-              <div className="flex gap-4">
-                {['Facebook', 'Twitter', 'Instagram', 'LinkedIn'].map((social) => (
-                  <a 
-                    key={social}
-                    href="#" 
-                    className="hover:text-white transition-colors duration-200"
-                  >
-                    {social}
-                  </a>
-                ))}
-              </div>
+              <button
+                onClick={() => setFeedbackModalOpen(true)}
+                className="flex items-center gap-2 hover:text-white transition-colors duration-200"
+              >
+                <MessageSquare size={16} />
+                <span>Give Feedback</span>
+              </button>
             </div>
           </div>
         </div>
       </footer>
+
+      {/* Feedback Modal */}
+      <FeedbackModal 
+        isOpen={feedbackModalOpen} 
+        onClose={() => setFeedbackModalOpen(false)} 
+      />
     </div>
   );
 };

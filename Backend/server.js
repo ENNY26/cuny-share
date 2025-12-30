@@ -17,6 +17,7 @@ import conversationRoutes from './routes/conversationRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import policyRoutes from './routes/policy.routes.js';
+import feedbackRoutes from './routes/feedback.routes.js';
 import Message from './models/Message.js';
 import Conversation from './models/Conversation.js';
 import User from './models/User.js';
@@ -96,6 +97,7 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/policies', policyRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 
 // Health check
