@@ -146,30 +146,6 @@ const MainHome = () => {
           </motion.div>
         </motion.section>
 
-        {/* Stats Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center"
-        >
-          <div className="inline-flex items-center gap-6 text-sm text-gray-500">
-            <div>
-              <div className="text-lg font-semibold text-indigo-600">500+</div>
-              <div>Active Listings</div>
-            </div>
-            <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-            <div>
-              <div className="text-lg font-semibold text-indigo-600">98%</div>
-              <div>Trust Score</div>
-            </div>
-            <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-            <div>
-              <div className="text-lg font-semibold text-indigo-600">24h</div>
-              <div>Avg. Response</div>
-            </div>
-          </div>
-        </motion.section>
       </main>
 
       {/* Footer */}

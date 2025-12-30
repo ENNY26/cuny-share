@@ -55,26 +55,19 @@ const Home = () => {
   const features = [
     {
       icon: <BookOpen size={28} />,
-      title: 'Share Academic Resources',
-      description: 'Access and contribute to a vast library of study materials, textbooks, and course notes curated by CUNY students.'
+      title: 'Buy & Sell Textbooks',
+      description: 'Find affordable textbooks from students who just finished your courses, or sell yours to students who need them next semester.'
     },
     {
       icon: <Lightbulb size={28} />,
-      title: 'Easy to Use',
-      description: 'The easiest way for CUNY students to swap notes, resources, and support.'
+      title: 'Student Marketplace',
+      description: 'List and browse items like electronics, furniture, notes, and more. Everything you need for college life, from fellow students.'
     },
     {
       icon: <Users size={28} />,
-      title: 'Collaborate & Innovate',
-      description: 'Don’t study alone — join the CUNY Share community that’s built for students, by students'
+      title: 'CUNY-Wide Network',
+      description: 'Connect with students across all CUNY campuses. Buy from sellers near you or on your campus for easy meetups.'
     }
-  ];
-
-  const stats = [
-    { number: '25+', label: 'CUNY Campuses' },
-    { number: '50K+', label: 'Active Members' },
-    { number: '100K+', label: 'Resources Shared' },
-    { number: '98%', label: 'Satisfaction Rate' }
   ];
 
   return (
@@ -95,21 +88,21 @@ const Home = () => {
               <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
                 <GraduationCap className="text-white" size={20} />
               </div>
-              <span className="text-sm font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-                CUNY Official Platform
+              <span className="text-sm font-semibold text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                Independent Marketplace • Not Affiliated with CUNY
               </span>
             </div>
             
             <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Connect with the{' '}
+              CUNY's Student{' '}
               <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                CUNY Community
+                Marketplace
               </span>
             </h1>
             
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              Join thousands of students and alumni across all CUNY campuses to share resources, 
-              collaborate on projects, and build your professional network in one unified platform.
+              Buy and sell textbooks, notes, electronics, furniture, and more with fellow CUNY students. 
+              A student-run marketplace connecting buyers and sellers across all CUNY campuses.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
@@ -133,20 +126,6 @@ const Home = () => {
               </motion.div>
             </div>
 
-            {/* Stats */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8 }}
-              className="grid grid-cols-2 sm:grid-cols-4 gap-6 mt-12 pt-8 border-t border-gray-200/60"
-            >
-              {stats.map((stat, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-2xl font-bold text-gray-900 mb-1">{stat.number}</div>
-                  <div className="text-sm text-gray-600">{stat.label}</div>
-                </div>
-              ))}
-            </motion.div>
           </motion.div>
 
           <motion.div 
@@ -171,10 +150,10 @@ const Home = () => {
             className="text-center mb-20"
           >
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Why Join <span className="text-indigo-600">CUNY Share</span>?
+              Why Use <span className="text-indigo-600">CUNY Share</span>?
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Experience the power of connected learning.
+              The easiest way to buy and sell with fellow CUNY students.
             </p>
           </motion.div>
 
@@ -215,7 +194,7 @@ const Home = () => {
             Ready to Join?
           </h2>
           <p className="text-xl mb-8 opacity-90 leading-relaxed max-w-2xl mx-auto">
-            Become part of the largest connected academic community in New York City. 
+            Start buying and selling with students across all CUNY campuses today. 
           </p>
           
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -244,7 +223,10 @@ const Home = () => {
                 <span className="text-xl font-bold">CUNY Share</span>
               </div>
               <p className="text-gray-400 leading-relaxed">
-                Connecting CUNY students and alumni across all campuses for a brighter academic future.
+                A student-run marketplace for buying and selling textbooks, notes, and more across all CUNY campuses.
+              </p>
+              <p className="text-gray-500 text-sm mt-2 italic">
+                Note: This is an independent platform and is not affiliated with or endorsed by CUNY.
               </p>
             </div>
             
