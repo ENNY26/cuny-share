@@ -33,6 +33,14 @@ const messageSchema = new mongoose.Schema({
     type: Boolean, 
     default: false 
   },
+  emailNotificationSent: {
+    type: Boolean,
+    default: false
+  },
+  emailNotificationSentAt: {
+    type: Date,
+    default: null
+  },
   createdAt: { 
     type: Date, 
     default: Date.now 

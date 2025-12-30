@@ -40,6 +40,15 @@ const sendEmailViaResend = async (to, subject, text) => {
   if (error) {
     console.error('❌ Resend API error:', error);
     
+    // Handle "testing emails only" restriction (free tier limitation)
+    if (error.statusCode === 403 && error.message?.includes('You can only send testing emails')) {
+      const errorMsg = `Resend API restriction: You can only send to verified email addresses when using the default sender. ` +
+        `SOLUTION: Verify your domain (cunyshare.xyz) at https://resend.com/domains, then set RESEND_FROM_EMAIL=noreply@cunyshare.xyz ` +
+        `to send emails to any recipient.`;
+      console.error('❌', errorMsg);
+      throw new Error(errorMsg);
+    }
+    
     // Handle domain verification error specifically
     if (error.statusCode === 403 && error.message?.includes('domain is not verified')) {
       const suggestedFrom = process.env.RESEND_FROM_EMAIL || process.env.SENDER_EMAIL;
@@ -55,6 +64,10 @@ const sendEmailViaResend = async (to, subject, text) => {
           });
           
           if (retryResult.error) {
+            // If retry also fails with testing restriction, provide clear guidance
+            if (retryResult.error.statusCode === 403 && retryResult.error.message?.includes('You can only send testing emails')) {
+              throw new Error(`Resend API restriction: You can only send to verified email addresses. Verify your domain (cunyshare.xyz) at https://resend.com/domains and set RESEND_FROM_EMAIL=noreply@cunyshare.xyz`);
+            }
             throw new Error(`Resend API error: ${retryResult.error.message || JSON.stringify(retryResult.error)}`);
           }
           
