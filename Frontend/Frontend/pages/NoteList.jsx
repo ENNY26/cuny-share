@@ -29,7 +29,9 @@ import {
   ShoppingBag,
   Grid,
   List,
-  Flame
+  Flame,
+  Menu,
+  X as XIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProfileIcon from '../components/ProfileIcon';
@@ -57,6 +59,7 @@ const NoteList = () => {
   const [incomingByProduct, setIncomingByProduct] = useState({});
   const [viewIncomingFor, setViewIncomingFor] = useState(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const observerRef = useRef();
   const searchInputRef = useRef();
@@ -571,7 +574,8 @@ const NoteList = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-3">
               <button
                 onClick={() => navigate('/messages')}
                 className="relative p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-300 group"
@@ -589,6 +593,15 @@ const NoteList = () => {
               </button>
               <ProfileIcon />
             </div>
+
+            {/* Mobile Hamburger Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-300"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <XIcon size={24} /> : <Menu size={24} />}
+            </button>
           </div>
 
           {/* Mobile Search */}
@@ -616,6 +629,61 @@ const NoteList = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          
+          {/* Mobile Menu */}
+          <div className="fixed top-16 right-0 w-64 bg-white/95 backdrop-blur-xl border-l border-gray-100 shadow-2xl z-50 md:hidden transform transition-transform duration-300 ease-in-out">
+            <div className="flex flex-col p-4 gap-2">
+              {/* List Item Button */}
+              <button
+                onClick={() => {
+                  navigate('/upload-note');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-3 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold group"
+              >
+                <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+                <span>List Item</span>
+              </button>
+
+              {/* Messages Button */}
+              <button
+                onClick={() => {
+                  navigate('/messages');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-3 p-3 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-300 font-medium"
+              >
+                <MessageSquare size={20} className="text-blue-600" />
+                <span>Messages</span>
+              </button>
+
+              {/* Profile Section */}
+              <div className="pt-2 border-t border-gray-200">
+                <div className="flex items-center gap-3 p-3">
+                  <ProfileIcon />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 truncate">
+                      {user?.username || 'User'}
+                    </p>
+                    <p className="text-sm text-gray-600 truncate">
+                      {user?.school || 'Campus'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">

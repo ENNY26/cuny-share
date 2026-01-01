@@ -34,6 +34,10 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+// Add indexes for better query performance
+userSchema.index({ email: 1 }); // Explicit index on email for fast login lookups
+userSchema.index({ username: 1 }); // Index on username (already unique, but explicit is better)
+
 // Method to calculate and update badge
 userSchema.methods.updateBadge = function() {
   const score = (this.totalSales * 10) + (this.totalPosts * 2) + (this.totalLikes * 1) + (this.rating * 5);
