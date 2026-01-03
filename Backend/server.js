@@ -11,6 +11,8 @@ import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.route.js';
 import textbookRoutes from './routes/textbookRoutes.js'
 import path from 'path';
+import { existsSync } from 'fs';
+import { fileURLToPath } from 'url';
 import s3Routes from './routes/s3.routes.js';
 import messageRoutes from './routes/message.routes.js';
 import conversationRoutes from './routes/conversationRoutes.js';
@@ -24,6 +26,10 @@ import User from './models/User.js';
 import { setIO, getUserSockets } from './utils/socket.js';
 import { startMessageNotificationScheduler } from './utils/messageNotificationScheduler.js';
 dotenv.config();
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -99,7 +105,6 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/policies', policyRoutes);
 app.use('/api/feedback', feedbackRoutes);
 
-
 // Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK' });
@@ -130,7 +135,25 @@ app.get('/api/email-config', (req, res) => {
   res.status(200).json(config);
 });
 
+// Serve static files from frontend build directory (if it exists)
+// This handles production builds where frontend is served from backend
+const frontendBuildPath = path.join(process.cwd(), '..', 'Frontend', 'Frontend', 'dist');
 
+// Check if frontend build directory exists and serve static files
+if (existsSync(frontendBuildPath)) {
+  app.use(express.static(frontendBuildPath));
+  
+  // Catch-all handler: send back React's index.html file for any non-API routes
+  // This is essential for client-side routing to work on page reload
+  // MUST be placed after all other routes to avoid intercepting API calls
+  app.get('*', (req, res) => {
+    // Don't serve index.html for API routes (shouldn't happen due to route order, but safety check)
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API route not found' });
+    }
+    res.sendFile(path.join(frontendBuildPath, 'index.html'));
+  });
+}
 
 // Socket.io setup
 const io = new Server(httpServer, {
