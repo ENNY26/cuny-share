@@ -691,7 +691,7 @@ const NoteList = () => {
         <div className="mb-12">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-8">
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent mb-3">
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent mt-4 mb-3">
                 Discover Campus Treasures
               </h1>
               <p className="text-lg text-gray-600 max-w-2xl">
@@ -716,19 +716,7 @@ const NoteList = () => {
             </div>
           </div>
 
-          {/* Quick Search Tags */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            <span className="text-sm text-gray-500 font-medium mr-2">Popular:</span>
-            {['MacBook Pro', 'Textbooks', 'Bikes', 'Desk', 'iPhone', 'Free Items'].map((tag) => (
-              <button
-                key={tag}
-                onClick={() => handleQuickSearch(tag)}
-                className="px-4 py-2 bg-gradient-to-br from-white to-gray-50 rounded-full text-sm font-medium text-gray-700 hover:text-blue-600 hover:shadow-lg border border-gray-200 hover:border-blue-200 transition-all duration-300 hover:-translate-y-0.5"
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
+         
         </div>
 
         {/* Enhanced Categories */}

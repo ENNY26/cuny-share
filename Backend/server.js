@@ -138,22 +138,35 @@ app.get('/api/email-config', (req, res) => {
 // Serve static files from frontend build directory (if it exists)
 // This handles production builds where frontend is served from backend
 const frontendBuildPath = path.join(process.cwd(), '..', 'Frontend', 'Frontend', 'dist');
+const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
 
 // Check if frontend build directory exists and serve static files
 if (existsSync(frontendBuildPath)) {
   app.use(express.static(frontendBuildPath));
-  
-  // Catch-all handler: send back React's index.html file for any non-API routes
-  // This is essential for client-side routing to work on page reload
-  // MUST be placed after all other routes to avoid intercepting API calls
-  app.get('*', (req, res) => {
-    // Don't serve index.html for API routes (shouldn't happen due to route order, but safety check)
-    if (req.path.startsWith('/api/')) {
-      return res.status(404).json({ error: 'API route not found' });
-    }
-    res.sendFile(path.join(frontendBuildPath, 'index.html'));
-  });
 }
+
+// Catch-all handler: send back React's index.html file for any non-API routes
+// This is essential for client-side routing to work on page reload
+// MUST be placed after all other routes to avoid intercepting API calls
+// Using a function to check the path instead of a route pattern to avoid path-to-regexp issues
+app.use((req, res, next) => {
+  // Only handle GET requests that are not API routes
+  if (req.method !== 'GET' || req.path.startsWith('/api/')) {
+    return next();
+  }
+  
+  // Only serve index.html if the build directory exists
+  if (existsSync(frontendIndexPath)) {
+    res.sendFile(frontendIndexPath);
+  } else {
+    // In development, if frontend isn't built, provide helpful error
+    res.status(404).json({ 
+      error: 'Frontend not built', 
+      message: 'Please build the frontend first by running "npm run build" in the Frontend/Frontend directory, or use the Vite dev server for development.',
+      path: req.path
+    });
+  }
+});
 
 // Socket.io setup
 const io = new Server(httpServer, {
