@@ -137,27 +137,34 @@ app.get('/api/email-config', (req, res) => {
 
 // Serve static files from frontend build directory (if it exists)
 // This handles production builds where frontend is served from backend
-const frontendBuildPath = path.join(process.cwd(), '..', 'Frontend', 'Frontend', 'dist');
-const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
+// Use path.resolve to ensure absolute path regardless of where server is started
+const frontendBuildPath = path.resolve(__dirname, '..', 'Frontend', 'Frontend', 'dist');
+const frontendIndexPath = path.resolve(frontendBuildPath, 'index.html');
 
 // Check if frontend build directory exists and serve static files
 if (existsSync(frontendBuildPath)) {
+  // Serve static files (JS, CSS, images, etc.) from the dist directory
+  // express.static automatically falls through to next middleware if file doesn't exist
   app.use(express.static(frontendBuildPath));
 }
 
 // Catch-all handler: send back React's index.html file for any non-API routes
 // This is essential for client-side routing to work on page reload
 // MUST be placed after all other routes to avoid intercepting API calls
-// Using a function to check the path instead of a route pattern to avoid path-to-regexp issues
-app.use((req, res, next) => {
-  // Only handle GET requests that are not API routes
-  if (req.method !== 'GET' || req.path.startsWith('/api/')) {
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
     return next();
   }
   
   // Only serve index.html if the build directory exists
   if (existsSync(frontendIndexPath)) {
-    res.sendFile(frontendIndexPath);
+    res.sendFile(frontendIndexPath, (err) => {
+      if (err) {
+        console.error('Error sending index.html:', err);
+        res.status(500).json({ error: 'Error serving frontend' });
+      }
+    });
   } else {
     // In development, if frontend isn't built, provide helpful error
     res.status(404).json({ 
