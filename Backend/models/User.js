@@ -34,9 +34,7 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// Add indexes for better query performance
-userSchema.index({ email: 1 }); // Explicit index on email for fast login lookups
-userSchema.index({ username: 1 }); // Index on username (already unique, but explicit is better)
+// Note: email and username already have indexes created by unique: true in schema definition above
 
 // Method to calculate and update badge
 userSchema.methods.updateBadge = function() {
