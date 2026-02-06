@@ -13,8 +13,13 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true); // Start with true for initial auth check
   const [error, setError] = useState(null);
 
-<<<<<<< HEAD
-  const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const API = import.meta.env.VITE_BACKEND_URL || 'https://cuny-share-h6pj.onrender.com';
+  
+  // Create axios instance with shorter timeout for auth requests
+  const authAxios = axios.create({
+    baseURL: API,
+    timeout: 10000, // 10 seconds timeout for faster feedback
+  });
 
   // Validate token and restore session on mount
   useEffect(() => {
@@ -29,7 +34,7 @@ export const AuthProvider = ({ children }) => {
 
       try {
         // Verify token is valid by making an authenticated request
-        const res = await axios.get(`${API}/api/users/me`, {
+        const res = await authAxios.get('/api/users/me', {
           headers: { Authorization: `Bearer ${storedToken}` }
         });
 
@@ -49,16 +54,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     validateToken();
-  }, [API]); // Only run on mount
-=======
-  const API = import.meta.env.VITE_BACKEND_URL || 'https://cuny-share-h6pj.onrender.com';
-  
-  // Create axios instance with shorter timeout for auth requests
-  const authAxios = axios.create({
-    baseURL: API,
-    timeout: 10000, // 10 seconds timeout for faster feedback
-  });
->>>>>>> 0e9bd3fca4857b4d40a152ab455bb8ba1eed4759
+  }, []); // Only run on mount
 
   // Update localStorage on auth changes
   useEffect(() => {
