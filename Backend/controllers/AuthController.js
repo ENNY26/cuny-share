@@ -224,6 +224,7 @@ export const login = async (req, res) => {
     const trimmedPassword = password.trim();
 
     try {
+        // Find user by email (email field should be indexed for fast lookup)
         const user = await User.findOne({ email: trimmedEmail });
         if(!user) return res.status(400).json({message: "User not found"});
 
@@ -233,15 +234,22 @@ export const login = async (req, res) => {
             return res.status(400).json({message: "Invalid credentials"});
         }
 
-        // Auto-verify user if not already verified
+        // Auto-verify user if not already verified (use updateOne for better performance - non-blocking)
         if (!user.isVerified) {
-            user.isVerified = true;
-            await user.save();
+            // Don't await - let it run in background to speed up response
+            User.updateOne({ _id: user._id }, { isVerified: true }).catch(err => 
+                console.error('Failed to update isVerified:', err)
+            );
+            user.isVerified = true; // Update local object for response
         }
 
         const token = jwt.sign({id: user._id}, process.env.JWT_SECRET, {expiresIn: '7d'});
 
-        res.status(200).json({token, user});
+        // Convert user to plain object and remove password before sending
+        const userObj = user.toObject();
+        delete userObj.password;
+
+        res.status(200).json({token, user: userObj});
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({message: "Server error", error: error.message});

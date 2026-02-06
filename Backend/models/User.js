@@ -34,6 +34,8 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+// Note: email and username already have indexes created by unique: true in schema definition above
+
 // Method to calculate and update badge
 userSchema.methods.updateBadge = function() {
   const score = (this.totalSales * 10) + (this.totalPosts * 2) + (this.totalLikes * 1) + (this.rating * 5);

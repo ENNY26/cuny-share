@@ -17,13 +17,13 @@ router.post('/upload', auth, (req, res, next) => {
 }, uploadNote);
 router.get('/', getAllNotes)
 router.get('/trending', getTrendingPosts)
+router.get('/search', searchAndFilterNotes)
+router.get('/saved', auth, getSavedNotes);
 router.post('/:id/like', auth, likeNote)
 router.post('/:id/comment', auth, addComment)
-router.get('/search', searchAndFilterNotes)
 router.delete('/:id', auth, deleteNote);
 router.put('/:id', auth, updateNote)
 router.post('/:id/save', auth, saveNote);
-router.get('/saved', auth, getSavedNotes);
 router.get('/:id/view', viewNote);
 
 

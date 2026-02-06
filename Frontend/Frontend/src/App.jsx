@@ -65,6 +65,8 @@ const App = () => {
             </ProtectedRoute>
           } 
         />
+        {/* Catch-all route for 404 - should be last */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <ToastContainer position="top-right" autoClose={4000} />
     </BrowserRouter>

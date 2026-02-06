@@ -11,6 +11,8 @@ import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.route.js';
 import textbookRoutes from './routes/textbookRoutes.js'
 import path from 'path';
+import { existsSync } from 'fs';
+import { fileURLToPath } from 'url';
 import s3Routes from './routes/s3.routes.js';
 import messageRoutes from './routes/message.routes.js';
 import conversationRoutes from './routes/conversationRoutes.js';
@@ -24,6 +26,10 @@ import User from './models/User.js';
 import { setIO, getUserSockets } from './utils/socket.js';
 import { startMessageNotificationScheduler } from './utils/messageNotificationScheduler.js';
 dotenv.config();
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -99,7 +105,6 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/policies', policyRoutes);
 app.use('/api/feedback', feedbackRoutes);
 
-
 // Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK' });
@@ -130,7 +135,46 @@ app.get('/api/email-config', (req, res) => {
   res.status(200).json(config);
 });
 
+// Serve static files from frontend build directory (if it exists)
+// This handles production builds where frontend is served from backend
+// Use path.resolve to ensure absolute path regardless of where server is started
+const frontendBuildPath = path.resolve(__dirname, '..', 'Frontend', 'Frontend', 'dist');
+const frontendIndexPath = path.resolve(frontendBuildPath, 'index.html');
 
+// Check if frontend build directory exists and serve static files
+if (existsSync(frontendBuildPath)) {
+  // Serve static files (JS, CSS, images, etc.) from the dist directory
+  // express.static automatically falls through to next middleware if file doesn't exist
+  app.use(express.static(frontendBuildPath));
+}
+
+// Catch-all handler: send back React's index.html file for any non-API routes
+// This is essential for client-side routing to work on page reload
+// MUST be placed after all other routes to avoid intercepting API calls
+// Express 5 requires named wildcards, so use /{*splat} instead of *
+app.get('/{*splat}', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  
+  // Only serve index.html if the build directory exists
+  if (existsSync(frontendIndexPath)) {
+    res.sendFile(frontendIndexPath, (err) => {
+      if (err) {
+        console.error('Error sending index.html:', err);
+        res.status(500).json({ error: 'Error serving frontend' });
+      }
+    });
+  } else {
+    // In development, if frontend isn't built, provide helpful error
+    res.status(404).json({ 
+      error: 'Frontend not built', 
+      message: 'Please build the frontend first by running "npm run build" in the Frontend/Frontend directory, or use the Vite dev server for development.',
+      path: req.path
+    });
+  }
+});
 
 // Socket.io setup
 const io = new Server(httpServer, {
@@ -288,10 +332,7 @@ io.on('connection', (socket) => {
 });
 
 // DB Connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGO_URI)
 .then(() => {
   console.log('MongoDB connected');
   

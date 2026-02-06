@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true); // Start with true for initial auth check
   const [error, setError] = useState(null);
 
+<<<<<<< HEAD
   const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
   // Validate token and restore session on mount
@@ -49,6 +50,15 @@ export const AuthProvider = ({ children }) => {
 
     validateToken();
   }, [API]); // Only run on mount
+=======
+  const API = import.meta.env.VITE_BACKEND_URL || 'https://cuny-share-h6pj.onrender.com';
+  
+  // Create axios instance with shorter timeout for auth requests
+  const authAxios = axios.create({
+    baseURL: API,
+    timeout: 10000, // 10 seconds timeout for faster feedback
+  });
+>>>>>>> 0e9bd3fca4857b4d40a152ab455bb8ba1eed4759
 
   // Update localStorage on auth changes
   useEffect(() => {
@@ -66,7 +76,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post(`${API}/api/auth/signup`, formData);
+      const res = await authAxios.post('/api/auth/signup', formData);
       return res.data; // Expecting: { message: 'OTP sent to email' }
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed');
@@ -81,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post(`${API}/api/auth/verify`, { email, otp });
+      const res = await authAxios.post('/api/auth/verify', { email, otp });
       setUser(res.data.user);
       setToken(res.data.token);
       return true;
@@ -98,7 +108,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post(`${API}/api/auth/login`, { email, password });
+      const res = await authAxios.post('/api/auth/login', { email, password });
       setUser(res.data.user);
       setToken(res.data.token);
       return true;
@@ -121,7 +131,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post(`${API}/api/auth/forgot-password`, { email });
+      const res = await authAxios.post('/api/auth/forgot-password', { email });
       return res.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send reset OTP');
@@ -136,7 +146,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post(`${API}/api/auth/reset-password`, { email, otp, newPassword });
+      const res = await authAxios.post('/api/auth/reset-password', { email, otp, newPassword });
       return res.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Reset failed');
