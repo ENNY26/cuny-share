@@ -395,8 +395,9 @@ const UploadNote = () => {
                 <span className="text-red-500">*</span> Required fields
               </p>
             </div>
-          </form>
-        </div>
+            </form>
+          </div>
+        )}
 
         {/* Tips - Only show for product listings */}
         {postType === 'product' && (
@@ -425,8 +426,7 @@ const UploadNote = () => {
             </ul>
           </div>
         )}
-          </div>
-        )}
+      </div>
     </div>
   );
 };

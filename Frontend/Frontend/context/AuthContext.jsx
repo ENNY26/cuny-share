@@ -8,12 +8,47 @@ export const useAuth = () => useContext(AuthContext);
 
 // Provider
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
-  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true); // Start with true for initial auth check
   const [error, setError] = useState(null);
 
-  const API = import.meta.env.VITE_BACKEND_URL || 'https://cuny-share-h6pj.onrender.com';
+  const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
+  // Validate token and restore session on mount
+  useEffect(() => {
+    const validateToken = async () => {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+
+      if (!storedToken || !storedUser) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Verify token is valid by making an authenticated request
+        const res = await axios.get(`${API}/api/users/me`, {
+          headers: { Authorization: `Bearer ${storedToken}` }
+        });
+
+        // Token is valid, restore session with fresh user data
+        setToken(storedToken);
+        setUser(res.data.user);
+      } catch (err) {
+        // Token is invalid or expired, clear storage
+        console.warn('Token validation failed, clearing session:', err.message);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    validateToken();
+  }, [API]); // Only run on mount
 
   // Update localStorage on auth changes
   useEffect(() => {

@@ -49,7 +49,7 @@ const MainHome = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
               <Sparkles className="text-white" size={20} />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Campus Marketplace</h1>
+            <h1 className="text-2xl font-bold text-gray-900">CUNY Share</h1>
           </div>
         </motion.header>
 
@@ -80,7 +80,7 @@ const MainHome = () => {
             variants={itemVariants}
             className="text-gray-600 max-w-lg mx-auto"
           >
-            Discover amazing deals or list your items on campus marketplace
+            Discover amazing deals or list your items on CUNY Share
           </motion.p>
         </motion.section>
 

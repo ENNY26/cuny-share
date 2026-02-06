@@ -1,6 +1,18 @@
 import User from '../models/User.js';
 import Product from '../models/Product.js';
 
+// Get current authenticated user
+export const getCurrentUser = async (req, res) => {
+  try {
+    // req.user is set by auth middleware
+    const user = await User.findById(req.user._id).select('-password');
+    res.status(200).json({ user });
+  } catch (err) {
+    console.error('getCurrentUser error:', err);
+    res.status(500).json({ message: 'Failed to get current user', error: err.message });
+  }
+};
+
 export const getUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
