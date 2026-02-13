@@ -8,4 +8,5 @@ export default defineConfig({
   ],
   // Vite automatically handles client-side routing in dev server
   // For production, ensure the server serves index.html for all routes
+  // The backend server.js has a catch-all route configured for this
 })

@@ -151,12 +151,16 @@ if (existsSync(frontendBuildPath)) {
 // Catch-all handler: send back React's index.html file for any non-API routes
 // This is essential for client-side routing to work on page reload
 // MUST be placed after all other routes to avoid intercepting API calls
-// Express 5 requires named wildcards, so use /{*splat} instead of *
-app.get('/{*splat}', (req, res, next) => {
-  // Skip API routes
+// Express 5 requires using app.use() with a middleware function for catch-all routes
+app.use((req, res, next) => {
+  // Skip API routes - let them return 404 if not found
   if (req.path.startsWith('/api/')) {
     return next();
   }
+  
+  // Skip static file requests (they should be handled by express.static)
+  // If the file exists, express.static would have served it already
+  // So if we reach here, it's a client-side route
   
   // Only serve index.html if the build directory exists
   if (existsSync(frontendIndexPath)) {

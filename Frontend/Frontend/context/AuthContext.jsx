@@ -32,22 +32,43 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
+      // Restore from localStorage immediately for instant UI
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setToken(storedToken);
+        setUser(parsedUser);
+      } catch (err) {
+        console.error('Failed to parse stored user:', err);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setLoading(false);
+        return;
+      }
+
+      // Then validate token in background
       try {
         // Verify token is valid by making an authenticated request
         const res = await authAxios.get('/api/users/me', {
           headers: { Authorization: `Bearer ${storedToken}` }
         });
 
-        // Token is valid, restore session with fresh user data
+        // Token is valid, update with fresh user data
         setToken(storedToken);
         setUser(res.data.user);
       } catch (err) {
-        // Token is invalid or expired, clear storage
-        console.warn('Token validation failed, clearing session:', err.message);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setToken(null);
-        setUser(null);
+        // Only clear if it's an authentication error (401), not network errors
+        if (err.response?.status === 401) {
+          // Token is invalid or expired, clear storage
+          console.warn('Token validation failed (401), clearing session');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+        } else {
+          // Network error or other issue - keep the session but log warning
+          console.warn('Token validation failed (network error), keeping session:', err.message);
+          // User stays logged in with cached data
+        }
       } finally {
         setLoading(false);
       }
